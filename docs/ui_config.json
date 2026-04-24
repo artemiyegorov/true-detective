@@ -1,0 +1,139 @@
+{
+  "screens": {
+    "main_menu": {
+      "hero_image": "detective_office.png",
+      "cta_primary": "Start New Case",
+      "profile_stats": ["detective_level", "cases_solved", "accuracy_percentage"]
+    },
+    "briefing": {
+      "background": "loc_backroom_morning.png",
+      "overlay": "cold blue 30%",
+      "title_card": {"title": "DEATH AT THE BAKERY", "subtitle": "Case File #247"},
+      "narrator_voice": "adam",
+      "narrator_script_source": "briefing.narrator_script in ground_truth",
+      "subtitle_sync": "word-by-word to audio",
+      "buttons": [
+        {"label": "Review Case File", "action": "open_detailed_briefing"},
+        {"label": "Begin Investigation", "action": "go_to_map", "primary": true}
+      ],
+      "skip_button": true
+    },
+    "map": {
+      "background_style": "top-down hand-drawn illustrated map",
+      "initial_visible_locations": "from ground_truth locations where available_from_start==true",
+      "hidden_locations_unlock": "per unlock_triggers in ground_truth",
+      "location_states": {
+        "unvisited": {"color": "vibrant", "pulse": true},
+        "visited_incomplete": {"color": "normal", "pulse": false, "badge": "unexplored_hotspot_count"},
+        "completed": {"color": "desaturated", "badge": "checkmark"},
+        "locked": {"color": "dark", "tooltip": "You haven't learned about this place yet."}
+      },
+      "status_bar": ["evidence_count", "contradictions_count", "time_elapsed"],
+      "quick_access": ["notebook", "accuse_button"]
+    },
+    "location": {
+      "main_area_percentage": 80,
+      "hotspot_indicator": "subtle pulse glow",
+      "hotspot_hover_tooltip": "label on hover (desktop) or long-press (mobile)",
+      "modes": {
+        "investigation": "default, shows hotspots",
+        "people": "toggle, shows NPCs present"
+      },
+      "npc_display": "semi-transparent silhouette in scene, click to dialogue",
+      "back_button": "top-left",
+      "breadcrumb": "Map > Location > Sublocation"
+    },
+    "dialogue": {
+      "layout_desktop": {"portrait": "left 30%", "chat": "right 70%"},
+      "layout_mobile": {"portrait": "top 30%", "chat": "bottom 70%"},
+      "portrait": {
+        "size": "large head-and-shoulders",
+        "crossfade_on_mood_change": "400ms",
+        "mood_indicator": {
+          "elements": ["mood_emoji", "mood_label", "physical_action_text"],
+          "example": "😰 Nervous · clasps hands on table"
+        }
+      },
+      "chat_feed": {
+        "player_messages": {"align": "right", "bubble": "gray"},
+        "npc_messages": {"align": "left", "bubble": "character_color", "voice_play_button": true},
+        "system_messages": {"align": "center", "style": "italic dimmed"}
+      },
+      "input": {
+        "type": "free text",
+        "placeholder": "Ask something...",
+        "evidence_button": {
+          "icon": "paperclip",
+          "position": "left of input",
+          "on_click": "open evidence picker modal with collected items",
+          "on_select": "insert system message 'You show {name} the {evidence_name}', then trigger NPC response"
+        },
+        "voice_input_button": {
+          "icon": "microphone",
+          "position": "right of input",
+          "enabled": false_in_mvp,
+          "roadmap": "v1.1 — voice-to-text for player input"
+        }
+      },
+      "evidence_reference_detection": {
+        "enabled": true,
+        "method": "post each player message, Haiku classifier checks if inventory item is referenced",
+        "confidence_threshold": 0.7,
+        "ui": {
+          "inline_suggestion_card": {
+            "position": "below player message",
+            "text": "💡 Present {evidence_name} officially?",
+            "actions": [
+              {"label": "Yes, present it", "triggers": "evidence_present"},
+              {"label": "No, just talk", "dismisses_card": true}
+            ],
+            "auto_dismiss_seconds": 15
+          }
+        }
+      },
+      "top_bar": {
+        "back": "top-left",
+        "name": "center",
+        "end": "top-right"
+      }
+    },
+    "notebook": {
+      "tabs": ["Evidence", "Suspects", "My Notes (future)"],
+      "evidence_tab": {
+        "card_view": ["icon", "name", "where_found", "importance_tag"],
+        "click_expands": ["full_description", "related_dialogues_links", "use_in_accusation_toggle"]
+      },
+      "suspects_tab": {
+        "card_per_suspect": true,
+        "expandable": {
+          "alibi": "what they claimed",
+          "contradictions": "flagged by system in red",
+          "dialogue_history": "timeline of conversations",
+          "relationships": "connections to others"
+        }
+      },
+      "search_bar": true
+    },
+    "accusation": {
+      "warning": "You have 2 total attempts. Are you sure?",
+      "wizard_steps": [
+        {"step": 1, "title": "Select the murderer", "input": "suspect card click"},
+        {"step": 2, "title": "State the motive", "input": "free text + 5 suggested motives"},
+        {"step": 3, "title": "Select key evidence", "input": "drag 3-5 cards into slots"},
+        {"step": 4, "title": "Make your case", "input": "free text 2-3 sentences"}
+      ],
+      "submit_button": "CONFIRM ACCUSATION",
+      "evaluation": "per solution config in ground_truth"
+    },
+    "verdict": {
+      "acts": [
+        {"act": 1, "name": "Your Accusation", "duration": 30, "content": "courtroom scene, player's accusation read by narrator voice"},
+        {"act": 2, "name": "The Reaction", "duration": 45, "content": "if correct: murderer's breakdown monologue; if wrong: innocent breaks down, cutaway to real killer"},
+        {"act": 3, "name": "Reconstruction", "duration": 30, "content": "scene of murder reconstructed with illustrations + narrator"},
+        {"act": 4, "name": "Verdict", "duration": 15, "content": "star rating, stats"},
+        {"act": 5, "name": "Meta Hook", "duration": 15, "content": "meta_arc_seed.player_visible_text if applicable"},
+        {"act": 6, "name": "Share", "duration": "interactive", "content": "challenge friend button, social share"}
+      ]
+    }
+  }
+}
