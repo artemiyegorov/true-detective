@@ -2,7 +2,8 @@ export type Mood =
   | "calm" | "guarded" | "nervous" | "defensive" | "panicked"
   | "broken" | "angry" | "indignant" | "numb" | "withdrawn"
   | "sad" | "scared" | "cooperative" | "confused" | "curious"
-  | "helpful" | "thoughtful" | "surprised" | "annoyed" | "grieving";
+  | "helpful" | "thoughtful" | "surprised" | "annoyed" | "grieving"
+  | "warm" | "tense" | "stonewalling" | "hysterical" | "hollow";
 
 type VoiceSettings = {
   stability: number;
@@ -32,6 +33,11 @@ const MOOD_TO_SETTINGS: Record<Mood, Omit<VoiceSettings, "use_speaker_boost">> =
   surprised: { stability: 0.40, similarity_boost: 0.73, style: 0.55 },
   annoyed: { stability: 0.55, similarity_boost: 0.75, style: 0.45 },
   grieving: { stability: 0.55, similarity_boost: 0.77, style: 0.40 },
+  warm: { stability: 0.70, similarity_boost: 0.80, style: 0.25 },
+  tense: { stability: 0.50, similarity_boost: 0.76, style: 0.40 },
+  stonewalling: { stability: 0.80, similarity_boost: 0.78, style: 0.05 },
+  hysterical: { stability: 0.20, similarity_boost: 0.70, style: 0.75 },
+  hollow: { stability: 0.75, similarity_boost: 0.75, style: 0.10 },
 };
 
 export function voiceSettingsFor(mood: Mood | string): VoiceSettings {

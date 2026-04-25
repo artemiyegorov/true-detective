@@ -1,0 +1,1185 @@
+{
+  "case_id": "case_001_bakery_open",
+  "version": "1.0",
+  "format": "open_investigation",
+  "language": "en",
+  "meta": {
+    "title": "Death at the Bakery",
+    "subtitle": "Case File #247",
+    "tagline": "Five people had reasons. One of them did it. Build your case.",
+    "difficulty": "detective",
+    "estimated_minutes": 75,
+    "theme": "small_town_secrets",
+    "setting_description": "Millbrook — a quiet American small town, population 8,400. Early spring, cold nights.",
+    "tone": "grounded, realistic, small-town drama with multiple buried secrets"
+  },
+  "briefing": {
+    "opening_scene": "Monday morning, March 17th. 6:47 AM. Martin Reyes, the young baker at Cole & Sons Bakery on Olive Street, arrives to start his shift. He finds his boss, Margaret Cole, dead in the backroom. Blunt force trauma to the back of the head. Time of death: Sunday night, between 23:00 and 01:00.",
+    "key_facts": [
+      "Victim: Margaret Cole, 54, bakery owner",
+      "Cause of death: Blunt force trauma — instrument unclear, possibly heavy metal object",
+      "Time of death: Sunday 23:00-01:00",
+      "Back door unlocked, no forced entry — killer had a key or was let in",
+      "Cash untouched, $847 in register",
+      "Margaret was last seen alive at 20:30 leaving home"
+    ],
+    "your_task": "Margaret was loved by some, resented by some, in conflict with others. You'll need to talk to many people, gather evidence, and decide for yourself who did this — and whether you have enough to prove it.",
+    "open_investigation_note": "There is no fixed path. Some witnesses know nothing useful. Some have secrets that have nothing to do with the murder. Be skeptical. Build your case carefully — once you accuse someone, you cannot take it back.",
+    "narrator_voice_style": "Grounded, calm, no theatrics. Mid-40s American male.",
+    "narrator_script": "Monday morning. Six forty-seven AM. Martin Reyes, the young baker at Cole and Sons, finds his boss dead in the backroom. Margaret Cole. Fifty-four. Blunt force trauma to the back of the head. The cash drawer wasn't touched. The back door was unlocked. Whoever did this had a key, or Margaret let them in. She had eight people in her life worth talking to. Some loved her. Some had reasons to be angry. Some have nothing to do with this at all. Your job is to figure out which is which.",
+    "duration_seconds": 50
+  },
+  "victim": {
+    "name": "Margaret Cole",
+    "age": 54,
+    "occupation": "Owner of Cole & Sons Bakery (15 years)",
+    "bio": "Founded the bakery with husband David 15 years ago. Took Sarah Kim as business partner 3 years ago. Tough but fair. Married 25 years. One son, Tyler, 16. Active in town affairs. Briefly had an affair with Tom Brennan 18 months ago — over by January last year, but it left wounds.",
+    "time_of_death": "2024-03-17T23:50:00",
+    "cause_of_death": "Blunt force trauma to the back of the head from a heavy bronze paperweight (engraved 'Millbrook Chamber of Commerce — 2019')",
+    "location_of_death": "loc_backroom"
+  },
+  "murder": {
+    "murderer_id": "char_tom",
+    "motive_category": "personal_resentment_and_collapse",
+    "motive_detail": "Tom Brennan and Margaret had an affair 18 months ago, lasting about 4 months. Margaret ended it; Tom accepted it at the time. Margaret kept seeing her therapist Dr. James Walsh, processing the affair and her marriage difficulties. Six weeks ago, Tom learned that Dr. Walsh is the brother of Tom's wife, Linda. Linda found out everything. Linda filed for divorce. Worse: Linda's father owns Brennan's biggest commercial real estate clients, and Tom is losing those contracts. His business is collapsing. Sunday night he came to the bakery to confront Margaret — he wanted her to 'fix what she broke', though he didn't have a clear plan. The argument escalated. He grabbed the bronze paperweight off her desk and struck her in the back of the head as she turned away in disgust. He left through the back door, took the paperweight, and dumped it in a creek behind his office downtown. He went home and pretended to sleep. He showed up at the bakery Monday morning when news spread, playing the shocked acquaintance.",
+    "weapon": "Bronze paperweight — 'Millbrook Chamber of Commerce 2019' engraved (Margaret was on the Chamber board, awarded to all members)",
+    "weapon_disposal": "Dumped in Mill Creek behind Brennan Real Estate office — 4 minute drive from bakery. Currently submerged, recoverable with metal detection.",
+    "time_of_crime": "2024-03-17T23:50:00",
+    "killer_alibi_strategy": "Tom claims he was home with his wife Linda all evening. But Linda has moved out (divorce filed 2 weeks ago) — he's lying about her presence. He hopes no one checks. If pressed: 'we're working through some things, she stayed at her sister's that night.'"
+  },
+  "timeline": [
+    {
+      "time": "19:00",
+      "event": "Margaret has dinner at home with David and Tyler.",
+      "visible_via": [
+        "char_david",
+        "char_tyler"
+      ]
+    },
+    {
+      "time": "20:30",
+      "event": "Margaret leaves for the bakery to 'work on the books'.",
+      "visible_via": [
+        "char_david"
+      ]
+    },
+    {
+      "time": "21:00",
+      "event": "Margaret calls Sarah from the bakery, asks her to come at 23:00 to discuss 'something serious'.",
+      "visible_via": [
+        "char_sarah",
+        "ev_bakery_phone_log"
+      ]
+    },
+    {
+      "time": "21:30",
+      "event": "David drives Tyler to Jake Morrison's for sleepover.",
+      "visible_via": [
+        "char_david",
+        "char_tyler"
+      ]
+    },
+    {
+      "time": "21:45",
+      "event": "Daniel Kim is seen by neighbor Mrs. Carrington walking down Olive Street toward the bakery.",
+      "visible_via": [
+        "char_eleanor",
+        "char_daniel (denies)"
+      ]
+    },
+    {
+      "time": "22:00",
+      "event": "Sarah arrives at 'Olive' bar to wait for her 23:00 meeting with Margaret.",
+      "visible_via": [
+        "char_kevin",
+        "ev_bar_receipt"
+      ]
+    },
+    {
+      "time": "22:15",
+      "event": "Tom Brennan calls Margaret from his cell phone — 9 minutes. He demands to meet. Margaret tells him to come at 23:30.",
+      "visible_via": [
+        "ev_margaret_cell_log",
+        "if cell records subpoenaed"
+      ]
+    },
+    {
+      "time": "22:30",
+      "event": "David calls Helen Voss from home — 14 minutes.",
+      "visible_via": [
+        "ev_phone_log"
+      ]
+    },
+    {
+      "time": "22:45",
+      "event": "Daniel Kim, drunk, knocks on the bakery back door. Margaret refuses to open. He leaves angrily.",
+      "visible_via": [
+        "char_daniel (eventually admits)",
+        "ev_dna_door_handle"
+      ]
+    },
+    {
+      "time": "23:00",
+      "event": "Sarah leaves the bar to walk to the bakery.",
+      "visible_via": [
+        "char_kevin",
+        "ev_bar_receipt"
+      ]
+    },
+    {
+      "time": "23:10",
+      "event": "Sarah arrives at bakery. Margaret confronts her about $47k embezzlement. Heated argument. Margaret tells Sarah: 'I'm giving you 24 hours to confess to David and start repaying. Then we go to the police.'",
+      "visible_via": [
+        "char_sarah (eventually breaks)",
+        "ev_footprint_44"
+      ]
+    },
+    {
+      "time": "23:35",
+      "event": "Sarah leaves the bakery, shaken but alive. Walks home in tears.",
+      "visible_via": [
+        "char_sarah"
+      ]
+    },
+    {
+      "time": "23:40",
+      "event": "Tom Brennan arrives at the bakery via back door (he has a key from when his real estate firm leased to Cole & Sons years ago — never returned).",
+      "visible_via": [
+        "ev_tom_old_key",
+        "ev_security_camera_glimpse"
+      ]
+    },
+    {
+      "time": "23:50",
+      "event": "Tom strikes Margaret with the bronze paperweight. She dies instantly.",
+      "visible_via": []
+    },
+    {
+      "time": "23:55",
+      "event": "Tom leaves through back door with the paperweight wrapped in his coat.",
+      "visible_via": [
+        "ev_partial_footprint_size_11"
+      ]
+    },
+    {
+      "time": "00:08",
+      "event": "Tom dumps paperweight in Mill Creek behind his office.",
+      "visible_via": [
+        "ev_paperweight_in_creek"
+      ]
+    },
+    {
+      "time": "00:25",
+      "event": "Tom arrives home. Empty house (Linda moved out). Pretends to sleep.",
+      "visible_via": []
+    },
+    {
+      "time": "06:47",
+      "event": "Martin Reyes arrives, finds body, calls 911.",
+      "visible_via": [
+        "char_martin"
+      ]
+    }
+  ],
+  "characters": [
+    {
+      "id": "char_tom",
+      "name": "Tom Brennan",
+      "age": 52,
+      "is_murderer": true,
+      "role": "Local commercial real estate broker, family friend of the Coles",
+      "first_appearance": "Tom shows up at the bakery Monday morning around 09:30 with coffee and condolences. He hugs David. He tells the detective if interviewed: 'I just heard. Margaret was a friend. What can I do?'",
+      "personality_short": "Charming, polished, salesman-confident. Hides desperation under composure.",
+      "personality_long": "Tom is the kind of small-town businessman who knows everyone, shakes every hand, remembers names. Late 50s, tall, well-kept. He's the last person anyone suspects — too friendly, too embedded in the community. But for six weeks his life has been collapsing, and he hasn't told anyone. The mask is starting to crack at the edges.",
+      "speech_patterns": "Warm, professional, uses first names, light humor under normal pressure. Under stress: more clipped, longer pauses, redirects with 'look,' or 'the truth is'.",
+      "physical_description": "5'11\", broad-shouldered, grayish-brown hair receding at the temples, clean-shaven. Wearing a navy blazer and khakis even on a Monday — always 'on'. Wedding ring still on (he hasn't taken it off despite the divorce filing).",
+      "voice_profile": {
+        "elevenlabs_voice": "Brian or Adam",
+        "notes": "Mid-range, smooth, salesman-warm. Slight tightness under stress."
+      },
+      "relationship_to_victim": "Family friend through David — they were neighbors 15 years ago, stayed friendly. 18 months ago: short affair with Margaret (both restless in their marriages). She ended it after 4 months. Tom claimed he was fine. He thought he was fine.",
+      "alibi_claim": "Was home all Sunday evening with his wife Linda. Watched the news, went to bed around 23:00. Woke up Monday morning, heard about Margaret around 09:00, came to the bakery to support David.",
+      "alibi_truth": "Was home — but ALONE. Linda has been at her sister's for two weeks; she filed for divorce. Tom is hiding the divorce. He left home around 23:25, drove to the bakery, killed Margaret at 23:50, dumped the weapon in Mill Creek by 00:08, was home by 00:25.",
+      "secrets": [
+        "The 18-month-old affair with Margaret",
+        "His wife Linda has filed for divorce — moved out 2 weeks ago",
+        "His business is collapsing because Linda's father (his biggest client referrer) is pulling contracts",
+        "He still has a key to the bakery's back door from when his firm leased to the Coles 8 years ago — never returned, never noticed",
+        "He killed Margaret"
+      ],
+      "what_he_knows": [
+        "Everything about the murder",
+        "His own collapse — the divorce, the lost contracts",
+        "The affair history with Margaret",
+        "Margaret was meeting Sarah at 23:00 (he knew because Margaret told him on the phone at 22:15 to come AFTER Sarah left)",
+        "He has the old bakery key in his office drawer"
+      ],
+      "what_he_lies_about": [
+        "His wife being home Sunday night",
+        "His relationship with Margaret being purely friendly",
+        "Where he was between 23:25 and 00:25",
+        "The state of his business and marriage",
+        "Whether he ever had a key to the bakery"
+      ],
+      "breakable_evidence": [
+        {
+          "evidence_id": "ev_tom_margaret_affair",
+          "what_it_proves": "Tom and Margaret had an affair 18 months ago.",
+          "what_it_doesnt_prove": "That this had any current relevance.",
+          "reaction": "Long pause. Then quiet, deflated: 'Yes. It was a mistake. We both knew it. It was over within months. We've been friends since.' Mood: guarded, uncomfortable. Alibi 'I was home with Linda' still holds.",
+          "new_info_revealed": "The affair, briefly. He frames it as ancient and resolved.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_linda_divorce_filing",
+          "what_it_proves": "Linda filed for divorce two weeks ago. She wasn't home Sunday night.",
+          "what_it_doesnt_prove": "That Tom was at the bakery.",
+          "reaction": "Visible crack. 'Look, we're going through a difficult time. Linda's at her sister's. I should have told you, I just — I'm trying to keep my dignity. But I was home alone. I had nothing to do with Margaret.' Mood: cornered but composed. Alibi shifts to 'home alone' which is unprovable.",
+          "new_info_revealed": "Divorce. Linda's absence. He'll claim home-alone alibi instead.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_tom_old_key",
+          "what_it_proves": "Tom has a key to the bakery's back door, from his firm's old lease arrangement, that was never returned.",
+          "what_it_doesnt_prove": "That he used it Sunday night.",
+          "reaction": "Surprise — he's forgotten about it. 'Oh — that. I haven't thought about that key in years. It's probably in a desk drawer somewhere. I haven't been back in that bakery's backroom in five, six years.' Mood: nervous laugh, sweating. Alibi still claims home-alone.",
+          "new_info_revealed": "Confirms key exists and is in his office.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_paperweight_in_creek",
+          "what_it_proves": "The murder weapon was found in Mill Creek behind Tom's office.",
+          "what_it_doesnt_prove": "That Tom put it there. Anyone could.",
+          "reaction": "He stares. 'I don't know what you want me to say. The creek is behind half the businesses on Main Street. Anyone could have put it there.' Mood: rigid, defensive. Alibi unchanged.",
+          "new_info_revealed": "None directly — he won't break on this alone.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_margaret_cell_log_tom",
+          "what_it_proves": "Tom called Margaret at 22:15 Sunday — 9 minutes. He never mentioned this call.",
+          "what_it_doesnt_prove": "That he went to the bakery later.",
+          "reaction": "Pause. 'Yeah. I called her. About — about the affair. About Linda finding out. I was angry. I wanted to know why she'd told her therapist. But I didn't go anywhere. We talked. I went to bed.' Mood: forced calm. Alibi shifts marginally — 'phone call but no visit'.",
+          "new_info_revealed": "He admits calling. Admits Linda 'found out'. Doesn't admit to going to bakery.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_security_camera_glimpse",
+          "what_it_proves": "Grainy footage from a camera across the street shows a man matching Tom's height/build entering the bakery's alley at 23:38. Face not clearly visible.",
+          "what_it_doesnt_prove": "That it's specifically Tom (could be claimed to be anyone Tom-shaped).",
+          "reaction": "Watches the footage. Long silence. 'That's not me. That could be anyone. I want a lawyer.' Mood: shutting down. Alibi unchanged but he stops cooperating.",
+          "new_info_revealed": "He stops talking. Lawyer time.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_dna_paperweight",
+          "what_it_proves": "Tom's skin cell DNA on the paperweight (he gripped it). Combined with the creek location and the camera footage, this is conclusive.",
+          "what_it_doesnt_prove": "Nothing — this is conclusive evidence.",
+          "reaction": "Final breakdown. Long, silent moment. Then quiet: 'She broke everything. Linda. The contracts. My whole life. I just wanted her to acknowledge what she did. She wouldn't even look at me. She turned away. I — I don't even remember picking it up. I just — it was in my hand.' Mood: hollow, defeated. He confesses but frames it as 'lost control,' not premeditation.",
+          "new_info_revealed": "Full confession to the killing, framed as crime of passion.",
+          "is_final_breakdown": true
+        }
+      ],
+      "unlockable_actions": {},
+      "would_confess_to_murder": false,
+      "confession_conditions": "Only confesses on ev_dna_paperweight. Even then, frames it as loss of control. Never says 'I planned it' or 'I went there to kill her.' His version: 'I went to talk. It got out of control.'",
+      "initial_mood": "warm, sympathetic (when first met as 'family friend' Monday morning at bakery)",
+      "discoverable_path": "Tom is NOT obviously suspicious at the start. Player must follow secondary leads: cell phone records, the affair, his recent business troubles, his old keys to the bakery."
+    },
+    {
+      "id": "char_sarah",
+      "name": "Sarah Kim",
+      "age": 41,
+      "is_murderer": false,
+      "role": "Business partner of the victim",
+      "personality_short": "Professional, composed, polished. Cracks under sustained pressure.",
+      "personality_long": "Sarah trained herself to look put-together. Tailored blouse, neat hair tied back. She uses business vocabulary as armor. She's smart, but she's scared, and she's been scared for 8 months — about the embezzlement, about Margaret finding out, about her brother. Sunday night Margaret confronted her and gave her 24 hours. Then Margaret died, and Sarah is now both grieving AND terrified people will think she did it.",
+      "speech_patterns": "Business-speak when calm. Faster, fragmented when nervous. 'Look,' 'honestly,' 'the thing is.'",
+      "physical_description": "5'8\", size 12 feet (unusually large), shoulder-length dark hair tied back, tailored black blouse. Combat-style boots.",
+      "voice_profile": {
+        "elevenlabs_voice": "Matilda or Rachel",
+        "notes": "Warm alto, slight Chicago accent."
+      },
+      "relationship_to_victim": "3 years as business partners. Publicly 'like sisters,' privately tense — Margaret tightening financial controls.",
+      "alibi_claim": "Was at 'Olive' bar 22:00-23:00, then walked home. Did NOT go to the bakery Sunday night. (This is what she'll say at first.)",
+      "alibi_truth": "Was at bar 22:00-23:00. Then DID go to the bakery for the 23:00 meeting Margaret demanded. Confronted with the embezzlement, given 24 hours to confess. Left at 23:35, devastated. Walked home, cried, did NOT kill Margaret. Tom arrived 5 minutes after Sarah left.",
+      "secrets": [
+        "Embezzled $47,000 from the business over 8 months for her brother Daniel's gambling debts",
+        "Was at the bakery Sunday night arguing with Margaret",
+        "Margaret had given her a 24-hour ultimatum",
+        "Her brother Daniel is in deep with bookies who are threatening him"
+      ],
+      "what_she_knows": [
+        "Everything about the embezzlement",
+        "The argument with Margaret",
+        "Margaret was alive at 23:35 when she left",
+        "Her brother was in town that weekend (this is important — Daniel was nearby)"
+      ],
+      "what_she_lies_about": [
+        "Whether she went to the bakery Sunday night (initially denies)",
+        "Financial state of the bakery",
+        "Margaret's mood that day",
+        "Whether she knows about her brother being near the bakery that night"
+      ],
+      "breakable_evidence": [
+        {
+          "evidence_id": "ev_footprint_44",
+          "what_it_proves": "Someone wearing size 12 combat boots was in the bakery backroom recently.",
+          "what_it_doesnt_prove": "When (Sarah works there).",
+          "reaction": "Tense. 'I work there every day. My footprints are everywhere.' Mood: nervous. Alibi unchanged.",
+          "new_info_revealed": "None.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_bar_receipt",
+          "what_it_proves": "Sarah left 'Olive' bar at 23:04, not 'around midnight' as she initially claims.",
+          "what_it_doesnt_prove": "Where she went.",
+          "reaction": "Panic. Admits leaving early. Claims 'walked home, was upset, took a long route.' Alibi shifts to 'walking around alone.'",
+          "new_info_revealed": "Left bar at 23:04. Walking-alone alibi.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_bank_statements",
+          "what_it_proves": "$47,000 in transfers from business account to her brother over 8 months.",
+          "what_it_doesnt_prove": "That Margaret knew, or that Sarah killed her.",
+          "reaction": "Defensive. 'I was borrowing. I was going to pay it back. My brother was in trouble.' Mood: defensive but composed. Alibi: still 'walking alone.'",
+          "new_info_revealed": "The embezzlement. Brother's gambling.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_margaret_note",
+          "what_it_proves": "Margaret knew about the embezzlement and planned police action Monday morning.",
+          "what_it_doesnt_prove": "That Sarah killed her.",
+          "reaction": "Total breakdown. 'Yes. Yes, I went there. We argued. She gave me 24 hours. I left her ALIVE, I swear to God, I left her ALIVE at 23:35. I went home. I cried all night. I don't know who killed her, but it WASN'T ME.' Mood: hysterical, terrified, but firm on innocence.",
+          "new_info_revealed": "The 23:00 meeting. The 24-hour ultimatum. She was at scene but maintains innocence.",
+          "is_final_breakdown": true
+        }
+      ],
+      "unlockable_actions": {
+        "bank_records_request": {
+          "trigger_conditions": [
+            "Player demands financial records or 'the books'",
+            "AND player has shown ev_margaret_note to Sarah OR confronted her about $47k"
+          ],
+          "response": "Fine. I'll authorize it. I have nothing to hide.",
+          "unlocks_evidence": "ev_bank_statements",
+          "system_delay_seconds": 60
+        },
+        "reveal_brother_was_nearby": {
+          "trigger_conditions": [
+            "Player asks Sarah about her brother",
+            "AND player has confronted her about the embezzlement (ev_bank_statements presented OR she's broken on ev_margaret_note)"
+          ],
+          "response": "Daniel was in town that weekend. He owed people money. He came to me Saturday wanting more cash. I told him I couldn't. He was — he was in a state. I don't know where he was Sunday night. You should ask him.",
+          "unlocks_lead": "char_daniel_relevance",
+          "system_delay_seconds": 0
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Will confess to embezzlement and being at the scene. Will NEVER confess to murder because she didn't do it. Frames it: 'I left her alive.'",
+      "initial_mood": "professionally grieving, tense"
+    },
+    {
+      "id": "char_david",
+      "name": "David Cole",
+      "age": 58,
+      "is_murderer": false,
+      "role": "Husband of the victim",
+      "personality_short": "Tired, slightly irritable, avoids personal topics.",
+      "personality_long": "David carries the weight of a man who used to be someone. Worn cardigan, black coffee. Speaks slowly. Doesn't make eye contact easily. Picks his thumbnail. Grieving but also terrified of his affair coming out.",
+      "speech_patterns": "Formal, measured. 'I suppose,' 'to be fair,' 'the thing is.'",
+      "physical_description": "5'11\", thin, graying receding hair, three-day stubble. Brown cardigan, faded button-down.",
+      "voice_profile": {
+        "elevenlabs_voice": "Daniel or Clyde",
+        "notes": "Low, weary."
+      },
+      "relationship_to_victim": "Married 25 years. Last 2 years cold and quiet. He didn't know about Margaret's old affair with Tom. Margaret didn't know about his current affair with Helen.",
+      "alibi_claim": "Home all night. Drove Tyler to Jake's at 21:30, came back, watched TV, bed at 01:00.",
+      "alibi_truth": "TRUE — he was home. But called Helen Voss 22:30-22:44.",
+      "secrets": [
+        "4-month affair with Helen Voss",
+        "Suspected (but didn't know) Margaret was acting strange about money — never asked",
+        "Did NOT know about Margaret's affair with Tom Brennan"
+      ],
+      "what_he_knows": [
+        "Margaret was stressed last week — said 'something's not right with the books'",
+        "Margaret left home at 20:30 Sunday for the bakery",
+        "Sarah has a brother with gambling problems (Margaret mentioned briefly)",
+        "Tom Brennan is a family friend, was at Margaret's birthday last year"
+      ],
+      "what_he_lies_about": [
+        "Marriage was 'fine' (it was cold)",
+        "Phone call to Helen",
+        "How stressed Margaret was"
+      ],
+      "breakable_evidence": [
+        {
+          "evidence_id": "ev_phone_log",
+          "what_it_proves": "14-minute call from David's home phone at 22:30 to Helen Voss.",
+          "what_it_doesnt_prove": "That David was at the bakery.",
+          "reaction": "Long sigh. Confesses to the affair. Begs not to tell Tyler. Insists he was home all night. Helen will confirm. Mood: relieved-broken.",
+          "new_info_revealed": "The affair. Helen's number. 4 months long.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_margaret_note",
+          "what_it_proves": "Margaret knew about a $47k issue with someone whose initial is S.",
+          "what_it_doesnt_prove": "Anything about David.",
+          "reaction": "Quiet. 'So she figured it out. I had thought she was upset about something. She was tight-lipped that week. I told her if it was financial, go to a lawyer. I had no idea it was Sarah.' Mood: somber.",
+          "new_info_revealed": "He'd suspected something financial. Hadn't known about Sarah specifically.",
+          "is_final_breakdown": false
+        }
+      ],
+      "unlockable_actions": {
+        "bank_records_request": {
+          "trigger_conditions": [
+            "Player asks David about bakery finances OR shows ev_margaret_note"
+          ],
+          "response": "Yeah, I'm an authorized signatory. I'll have the bank send everything over.",
+          "unlocks_evidence": "ev_bank_statements",
+          "system_delay_seconds": 60
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Confesses to affair on ev_phone_log. Has nothing to confess about murder — innocent.",
+      "initial_mood": "grieving, withdrawn"
+    },
+    {
+      "id": "char_daniel",
+      "name": "Daniel Kim",
+      "age": 33,
+      "is_murderer": false,
+      "role": "Sarah's younger brother (compulsive gambler)",
+      "personality_short": "Twitchy, defensive, cycles between charm and aggression.",
+      "personality_long": "Daniel is the brother who never grew up. Charming when sober, hostile when desperate. Moved back in with their mom 6 months ago after losing his apartment. Has $80k in gambling debts to people who hurt people who don't pay. Sarah's been bailing him out for 8 months. He didn't know how — he doesn't ask. Sunday he was drunk and angry and went to the bakery to scream at Margaret because Sarah told him 'the money is going to stop' that Saturday.",
+      "speech_patterns": "Erratic. Quick when defensive ('I didn't do nothing'), slow and apologetic when caught. Casual American, slight Chicago accent like sister.",
+      "physical_description": "5'10\", thinner than he should be, 33 but looks 40. Dark circles, unshaven, wearing the same hoodie three days running. Shaky hands.",
+      "voice_profile": {
+        "elevenlabs_voice": "Ethan or Sam",
+        "notes": "Mid-range, edgy, sometimes too fast."
+      },
+      "relationship_to_victim": "Knew her through Sarah. Margaret tolerated him at family dinners. He resented her — saw her as the reason 'Sarah was getting tight-fisted.'",
+      "alibi_claim": "Was home with mom all Sunday night.",
+      "alibi_truth": "Was drunk Saturday and Sunday. Sunday around 22:30 he walked from mom's house (5 blocks from bakery) to the bakery. Banged on the back door at 22:45. Margaret refused to open. He shouted, kicked the door, and left around 22:55 in tears. He went home. He did NOT kill her. He never even saw her. But he left DNA on the door handle, and Mrs. Carrington saw him on Olive Street.",
+      "secrets": [
+        "$80k gambling debts to organized crime",
+        "Was at the bakery Sunday night, drunk, banging on the door",
+        "Has been physically threatened by his bookmakers"
+      ],
+      "what_he_knows": [
+        "He was outside the bakery at 22:45-22:55",
+        "He didn't see anyone else there at that time",
+        "His sister has been giving him money — he doesn't know exactly how much or where it comes from"
+      ],
+      "what_he_lies_about": [
+        "Whether he was anywhere near the bakery Sunday night",
+        "How much he owes",
+        "Whether he was drunk Sunday"
+      ],
+      "breakable_evidence": [
+        {
+          "evidence_id": "ev_eleanor_witness_daniel",
+          "what_it_proves": "Mrs. Carrington saw Daniel walking on Olive Street toward the bakery around 21:45.",
+          "what_it_doesnt_prove": "What he did or where he ended up.",
+          "reaction": "Defensive. 'Nah, that old lady's got dementia. Could've been anyone.' Mood: nervous. Doesn't break.",
+          "new_info_revealed": "None — denies.",
+          "is_final_breakdown": false
+        },
+        {
+          "evidence_id": "ev_dna_door_handle",
+          "what_it_proves": "Daniel's DNA on the back door handle.",
+          "what_it_doesnt_prove": "That he went inside or killed Margaret.",
+          "reaction": "Breaks. 'Okay! Okay! Yeah, I went there. I was drunk, I was angry, I wanted to talk to her. She wouldn't open the door. I shouted, I kicked the door, then I went home. I never saw her. I swear on my mom.' Mood: panicked but firm on innocence.",
+          "new_info_revealed": "Was at scene 22:45-22:55. Door wouldn't open. Never saw Margaret.",
+          "is_final_breakdown": true
+        }
+      ],
+      "unlockable_actions": {
+        "reveal_bookmaker_threats": {
+          "trigger_conditions": [
+            "Player asks Daniel about debts OR money OR who he owes",
+            "AND he has broken on ev_dna_door_handle (he's already in panic mode)"
+          ],
+          "response": "Look. I owe people. Bad people. They've been making it real clear what happens if I don't pay. That's why I needed Sarah's money. That's why I went to Margaret — I figured maybe she'd help. She didn't even open the door. I went home. I swear.",
+          "unlocks_lead": "context_for_motive",
+          "system_delay_seconds": 0
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Confesses to being at the scene only on DNA evidence. Won't confess to murder because he didn't do it.",
+      "initial_mood": "evasive, twitchy"
+    },
+    {
+      "id": "char_martin",
+      "name": "Martin Reyes",
+      "age": 24,
+      "is_murderer": false,
+      "role": "Bakery employee — found the body",
+      "personality_short": "Quiet, polite, nervous around police. Guatemalan-American (legal).",
+      "personality_long": "Found Margaret at 06:47 Monday. Has been crying on and off since. Respected Margaret deeply. Doesn't want to be involved in 'trouble' — immigrant anxiety even though papers are perfect.",
+      "speech_patterns": "Simple English, occasional 'sir', 'ma'am', sometimes Spanish words ('Dios mío'). Quiet voice.",
+      "physical_description": "5'7\", lean, short black hair, white baker's apron. Holds his own wrist when nervous.",
+      "voice_profile": {
+        "elevenlabs_voice": "Antoni",
+        "notes": "Soft, gentle, slight Spanish accent."
+      },
+      "relationship_to_victim": "Employee. She gave him the job 1.5 years ago. He respected her.",
+      "alibi_claim": "Home with sister Carolina watching a movie. Bed at 23:00. Work at 06:45.",
+      "alibi_truth": "TRUE. Carolina confirms.",
+      "secrets": [
+        "Overheard Margaret on Friday muttering 'these numbers don't add up'",
+        "Saw Tom Brennan at the bakery one afternoon two weeks ago talking quietly with Margaret in the alley — he didn't think much of it"
+      ],
+      "what_he_knows": [
+        "Margaret was stressed last week",
+        "Friday phone call about 'numbers'",
+        "Sarah was nervous during financial reviews",
+        "Tom Brennan was at the bakery alley two weeks ago talking with Margaret (THIS IS A KEY LEAD ABOUT TOM)"
+      ],
+      "what_he_lies_about": [
+        "Minimizes how stressed Margaret was",
+        "Doesn't volunteer any of his observations",
+        "Especially doesn't volunteer the Tom Brennan sighting (didn't think it was important)"
+      ],
+      "breakable_evidence": [
+        {
+          "evidence_id": "ev_margaret_note",
+          "what_it_proves": "Margaret knew about $47k.",
+          "what_it_doesnt_prove": "Who.",
+          "reaction": "Opens up. Tells about Friday phone call. Names Sarah's nervousness. Mood: cooperative-sad.",
+          "new_info_revealed": "Friday call. Sarah's nervousness.",
+          "is_final_breakdown": false
+        }
+      ],
+      "unlockable_actions": {
+        "reveal_tom_alley_meeting": {
+          "trigger_conditions": [
+            "Player asks Martin about anyone unusual visiting Margaret",
+            "OR asks if Margaret had recent conflicts",
+            "OR asks specifically about Tom Brennan",
+            "OR asks about people coming to the bakery that weren't customers"
+          ],
+          "response": "Sí — actually, two weeks ago. Mr. Brennan, the real estate man? He was here one afternoon, in the alley, talking with Mrs. Margaret. They looked... serious. Not customer-talking. Quiet. Mrs. Margaret looked upset. I didn't ask, it wasn't my business. But you ask, so — yes. He was here.",
+          "unlocks_lead": "char_tom_relevance",
+          "system_message_on_unlock": "Martin mentioned Tom Brennan having a serious conversation with Margaret in the alley two weeks ago. Tom is now flagged as relevant.",
+          "system_delay_seconds": 0
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Nothing to confess.",
+      "initial_mood": "shaken, scared, polite"
+    },
+    {
+      "id": "char_tyler",
+      "name": "Tyler Cole",
+      "age": 16,
+      "is_murderer": false,
+      "role": "Son of the victim",
+      "personality_short": "Numb teenager in shock. Short answers. Defensive.",
+      "personality_long": "Numb. Was at Jake's all night. Smokes weed (secret, unrelated to case).",
+      "speech_patterns": "'Yeah,' 'I guess,' 'I don't know,' 'whatever.'",
+      "physical_description": "5'9\", skinny, hoodie, picks at hoodie cuff.",
+      "voice_profile": {
+        "elevenlabs_voice": "Josh",
+        "notes": "Soft, mumbly."
+      },
+      "relationship_to_victim": "Son. Close but had teen friction.",
+      "alibi_claim": "At Jake Morrison's sleepover 21:30 Sunday to 10:00 Monday.",
+      "alibi_truth": "TRUE. Jake, Jake's mom, Jake's brother all confirm.",
+      "secrets": [
+        "Smoked weed at Jake's. Unrelated to case."
+      ],
+      "what_he_knows": [
+        "Vaguely aware his dad has been weird the last few months — quiet, on the phone a lot",
+        "Mom seemed stressed last week, didn't ask",
+        "Tom Brennan was at his birthday party last year — 'family friend' kind of thing"
+      ],
+      "what_he_lies_about": [
+        "Says mom was 'normal' (didn't pay attention)"
+      ],
+      "breakable_evidence": [],
+      "unlockable_actions": {},
+      "would_confess_to_murder": false,
+      "confession_conditions": "Nothing to confess.",
+      "initial_mood": "numb"
+    },
+    {
+      "id": "char_kevin",
+      "name": "Kevin Pratt",
+      "age": 35,
+      "is_murderer": false,
+      "role": "Bartender at 'Olive' bar",
+      "personality_short": "Chatty, helpful, loves gossip. Honest witness.",
+      "personality_long": "Six-year bartender at 'Olive'. Knows everyone. Helpful, slightly excited to be involved. Wears clean button-downs. Shaved head.",
+      "speech_patterns": "'Buddy,' 'pal,' 'y'know.' Talkative.",
+      "physical_description": "5'10\", shaved head, navy button-down, behind bar polishing a glass.",
+      "voice_profile": {
+        "elevenlabs_voice": "Sam",
+        "notes": "Friendly mid-range, talkative."
+      },
+      "relationship_to_victim": "Acquaintance. Margaret got morning coffee from the bakery, Kevin saw her sometimes.",
+      "alibi_claim": "Worked the bar 18:00-02:00.",
+      "alibi_truth": "TRUE.",
+      "secrets": [
+        "Around 23:38 he saw a man enter the alley behind the bakery — well-dressed, blazer, didn't recognize at the time but realized later it was Tom Brennan when he saw Tom on Monday morning at the bakery",
+        "Sarah was at the bar 22:00-23:04, NOT until midnight"
+      ],
+      "what_he_knows": [
+        "Sarah's exact bar timing",
+        "The man (Tom) entering bakery alley around 23:38",
+        "Saw someone toss something into the dumpster behind the bar around 00:10 (this was Daniel? No — Daniel had gone home. Tom went straight to Mill Creek. So this is a red herring — actually Mrs. Carrington's nephew throwing trash. Kevin doesn't know it was a red herring; he just saw a figure)"
+      ],
+      "what_he_lies_about": [
+        "Nothing."
+      ],
+      "breakable_evidence": [],
+      "unlockable_actions": {
+        "reveal_bar_timing": {
+          "trigger_conditions": [
+            "Player asks Kevin about Sarah's timing"
+          ],
+          "response": "Sarah? Oh yeah, she was here. Came in right at 22:00, left right at 23:04. I remember because the bachelor party came in at 23:00 and I cleared her table. She didn't argue, just paid and left.",
+          "unlocks_evidence": "ev_bar_receipt",
+          "system_delay_seconds": 0
+        },
+        "reveal_alley_figure": {
+          "trigger_conditions": [
+            "Player asks Kevin about anything unusual Sunday night",
+            "OR about people he saw near the bakery",
+            "OR about anyone matching Tom's description"
+          ],
+          "response": "Y'know, now you mention it — around 23:30, 23:40, I was outside getting a smoke. Saw a guy in a blazer walk into the alley by the bakery. Didn't think much of it. But Monday morning, when Tom Brennan came by the bakery? Pretty sure that was him. Same build, same kinda jacket.",
+          "unlocks_evidence": "ev_security_camera_glimpse",
+          "system_message_on_unlock": "Kevin's testimony pointed at Tom Brennan. The street camera footage is now requestable.",
+          "system_delay_seconds": 0
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Nothing to confess.",
+      "initial_mood": "helpful, curious"
+    },
+    {
+      "id": "char_eleanor",
+      "name": "Mrs. Eleanor Carrington",
+      "age": 79,
+      "is_murderer": false,
+      "role": "Elderly neighbor (lives across from bakery)",
+      "personality_short": "Sharp-eyed but unreliable memory. Gossipy. Lonely.",
+      "personality_long": "Mrs. Carrington has lived on Olive Street for 51 years. Watches everything. Loves to talk. But she's 79 and her memory mixes timeframes — events from last week and 30 years ago blend. Some of what she says is gold. Some is fabricated unconsciously. Player must triangulate.",
+      "speech_patterns": "Old-fashioned, formal-friendly, tangential. 'Now let me think,' 'I do believe,' 'when my Harold was alive...'",
+      "physical_description": "Small, gray-haired bun, floral cardigan, sitting in her front room with tea.",
+      "voice_profile": {
+        "elevenlabs_voice": "Lily or Charlotte (older female)",
+        "notes": "Warm, slightly tremulous."
+      },
+      "relationship_to_victim": "Neighbor. Knew Margaret 'since she was a young woman'. Liked her.",
+      "alibi_claim": "Home all evening as always.",
+      "alibi_truth": "TRUE. Watched her stories on TV.",
+      "secrets": [],
+      "what_she_knows": [
+        "Saw Daniel walking down Olive Street toward the bakery around 21:45 (this is correct)",
+        "Heard 'a kind of shouting' around 22:45 — couldn't make out words (this was Daniel banging on the door)",
+        "Saw a 'fancy car' park near the bakery around 23:30 — couldn't see the driver (this was Tom but she doesn't know)",
+        "ALSO has stories about a 'tall man' she saw 'just last week, no, was it last month?' that gets confused with another sighting from years ago",
+        "Will confidently misidentify timing — claims Margaret used to come home at 23:00 'every Sunday' (not true)",
+        "Knows about David's affair vaguely ('I see things, you know') — actually true, she saw Helen visit once"
+      ],
+      "what_she_lies_about": [
+        "Nothing intentionally — but her memory blurs"
+      ],
+      "breakable_evidence": [],
+      "unlockable_actions": {
+        "reveal_daniel_sighting": {
+          "trigger_conditions": [
+            "Player asks Mrs. Carrington about anything unusual Sunday night",
+            "OR about people seen on Olive Street",
+            "OR specifically about Daniel"
+          ],
+          "response": "Oh yes, that young man — Sarah's brother, I believe? Walking right down the middle of the street around — let me think — around quarter to ten? Looked like he'd been drinking. Stumbling a little.",
+          "unlocks_lead": "daniel_was_nearby",
+          "system_delay_seconds": 0
+        },
+        "reveal_fancy_car": {
+          "trigger_conditions": [
+            "Player asks about cars or vehicles around the bakery"
+          ],
+          "response": "Oh — yes, there was a nice car. Dark color. Parked a block away from the bakery, maybe around half-past-eleven? I didn't see who got out. I went to make my tea.",
+          "unlocks_lead": "tom_car_detail",
+          "system_delay_seconds": 0
+        },
+        "reveal_helen_sighting": {
+          "trigger_conditions": [
+            "Player asks Mrs. Carrington about David's behavior",
+            "OR if she's seen anyone unusual at the Cole house"
+          ],
+          "response": "Oh, between you and me, dear — there was a woman. Visited David one afternoon when poor Margaret was at work. Not a customer. Came in a yellow cardigan. They didn't see me at the window. People should be careful.",
+          "unlocks_lead": "helen_relevance",
+          "system_delay_seconds": 0
+        }
+      },
+      "would_confess_to_murder": false,
+      "confession_conditions": "Nothing to confess.",
+      "initial_mood": "warm, talkative",
+      "important_note_for_design": "Mrs. Carrington is the 'noise' character. Some of her info is golden (Daniel sighting, fancy car, Helen sighting). Some is misleading (timing claims). Player must learn to use her selectively."
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_bakery_main",
+      "name": "Cole & Sons Bakery — Front",
+      "available_from_start": true,
+      "hotspots": [
+        {
+          "id": "hs_register",
+          "label": "Cash register",
+          "available_from_start": true,
+          "on_click_text": "Register open. $847 untouched.",
+          "reveals": {
+            "type": "fact",
+            "id": "fact_not_robbery"
+          }
+        },
+        {
+          "id": "hs_chalkboard",
+          "label": "Chalkboard",
+          "available_from_start": true,
+          "on_click_text": "Sunday's specials in Margaret's neat handwriting.",
+          "reveals": null
+        },
+        {
+          "id": "hs_door_to_back",
+          "label": "Door to backroom",
+          "available_from_start": true,
+          "on_click_text": "Crime scene tape across.",
+          "leads_to_location": "loc_backroom"
+        }
+      ]
+    },
+    {
+      "id": "loc_backroom",
+      "name": "Bakery Backroom (Crime Scene)",
+      "available_from_start": true,
+      "hotspots": [
+        {
+          "id": "hs_footprint",
+          "label": "Boot print by back door",
+          "available_from_start": true,
+          "on_click_text": "Size 12 combat-style boot print, partial flour.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_footprint_44"
+          }
+        },
+        {
+          "id": "hs_partial_print",
+          "label": "Partial size 11 print",
+          "available_from_start": true,
+          "on_click_text": "Smaller, smudged. Different boot — dress shoe pattern. Size approx 11. Near where the body fell.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_partial_footprint_size_11"
+          }
+        },
+        {
+          "id": "hs_desk",
+          "label": "Margaret's desk",
+          "available_from_start": true,
+          "on_click_text": "Friday's note: 'S — 47k, talk Sun eve, police Mon AM'. Also: a dark spot on the desk surface where something heavy used to sit. Outline visible in dust.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_margaret_note"
+          }
+        },
+        {
+          "id": "hs_paperweight_outline",
+          "label": "Outline on desk",
+          "available_from_start": true,
+          "on_click_text": "A square outline in the desk dust where something heavy was sitting until recently. About 4 inches square.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_missing_paperweight"
+          }
+        },
+        {
+          "id": "hs_back_door",
+          "label": "Back door",
+          "available_from_start": true,
+          "on_click_text": "Unlocked. No forced entry. Killer had a key — or was let in.",
+          "reveals": {
+            "type": "fact",
+            "id": "fact_killer_had_key"
+          }
+        },
+        {
+          "id": "hs_door_handle_dna",
+          "label": "Door handle (back door)",
+          "available_from_start": true,
+          "on_click_text": "Forensics found two DNA profiles on the handle: Margaret's and an unknown male's. Comparison pending suspect samples.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_dna_door_handle"
+          }
+        },
+        {
+          "id": "hs_body_outline",
+          "label": "Body outline",
+          "available_from_start": true,
+          "on_click_text": "Margaret fell forward. Wound on back of head. Struck from behind by someone she trusted enough to turn her back to.",
+          "reveals": {
+            "type": "fact",
+            "id": "fact_struck_from_behind"
+          }
+        },
+        {
+          "id": "hs_phone",
+          "label": "Bakery landline",
+          "available_from_start": true,
+          "on_click_text": "Call log: incoming at 22:15 from a cell number — duration 9 minutes. Number traces to Tom Brennan.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_margaret_cell_log_tom"
+          }
+        }
+      ]
+    },
+    {
+      "id": "loc_cole_house",
+      "name": "Cole Family Home",
+      "available_from_start": true,
+      "hotspots": [
+        {
+          "id": "hs_home_phone",
+          "label": "Home phone",
+          "available_from_start": true,
+          "on_click_text": "Last outgoing call: Sunday 22:30 to (555)-0137 — Helen Voss. 14 min.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_phone_log"
+          }
+        },
+        {
+          "id": "hs_living_room",
+          "label": "Living room",
+          "available_from_start": true,
+          "on_click_text": "Family photos. Last 6 months sparse.",
+          "reveals": {
+            "type": "fact",
+            "id": "fact_family_drifted"
+          }
+        },
+        {
+          "id": "hs_tyler_room",
+          "label": "Tyler's room (upstairs)",
+          "available_from_start": true,
+          "leads_to_npc": "char_tyler"
+        }
+      ]
+    },
+    {
+      "id": "loc_olive_bar",
+      "name": "'Olive' Bar",
+      "available_from_start": false,
+      "unlock_triggers": [
+        {
+          "type": "npc_mentions",
+          "npc_id": "char_sarah",
+          "keywords": [
+            "Olive",
+            "bar",
+            "Kevin"
+          ]
+        },
+        {
+          "type": "player_mentions",
+          "keywords": [
+            "bar across street",
+            "Olive bar"
+          ]
+        }
+      ],
+      "hotspots": [
+        {
+          "id": "hs_kevin",
+          "label": "Kevin (bartender)",
+          "available_from_start": true,
+          "leads_to_npc": "char_kevin"
+        },
+        {
+          "id": "hs_receipts",
+          "label": "Sunday receipts",
+          "available_from_start": true,
+          "requires_npc_interaction": "char_kevin",
+          "on_click_text": "Kevin shows tab: Sarah open 22:03, close 23:04, $24.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_bar_receipt"
+          }
+        }
+      ]
+    },
+    {
+      "id": "loc_brennan_office",
+      "name": "Brennan Real Estate Office",
+      "available_from_start": false,
+      "unlock_triggers": [
+        {
+          "type": "npc_mentions",
+          "npc_id": "char_martin",
+          "unlockable_action_id": "reveal_tom_alley_meeting"
+        },
+        {
+          "type": "npc_mentions",
+          "npc_id": "char_kevin",
+          "unlockable_action_id": "reveal_alley_figure"
+        },
+        {
+          "type": "npc_mentions",
+          "npc_id": "char_eleanor",
+          "unlockable_action_id": "reveal_fancy_car"
+        },
+        {
+          "type": "player_mentions",
+          "keywords": [
+            "Brennan",
+            "Tom's office",
+            "real estate office"
+          ]
+        }
+      ],
+      "hotspots": [
+        {
+          "id": "hs_creek_behind",
+          "label": "Mill Creek behind office",
+          "available_from_start": false,
+          "unlock_triggers": [
+            {
+              "type": "search_warrant_after_evidence",
+              "required_evidence": [
+                "ev_security_camera_glimpse",
+                "ev_margaret_cell_log_tom"
+              ]
+            }
+          ],
+          "on_click_text": "Metal detection in the creek. A bronze paperweight, recovered. Engraved: 'Millbrook Chamber of Commerce 2019'.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_paperweight_in_creek"
+          }
+        },
+        {
+          "id": "hs_office_desk",
+          "label": "Tom's office desk",
+          "available_from_start": false,
+          "unlock_triggers": [
+            {
+              "type": "search_warrant_after_evidence",
+              "required_evidence": [
+                "ev_security_camera_glimpse",
+                "ev_margaret_cell_log_tom"
+              ]
+            }
+          ],
+          "on_click_text": "In the bottom drawer: a key labeled 'Cole & Sons back'. Old, slightly dusty. Tom forgot about it.",
+          "reveals": {
+            "type": "evidence",
+            "id": "ev_tom_old_key"
+          }
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev_footprint_44",
+      "name": "Size 12 boot print",
+      "discovery": "direct",
+      "found_at": "loc_backroom:hs_footprint",
+      "significance": "Implicates Sarah (her boot size). Red herring — she WAS there but didn't kill Margaret."
+    },
+    {
+      "id": "ev_partial_footprint_size_11",
+      "name": "Partial size 11 dress shoe print",
+      "discovery": "direct",
+      "found_at": "loc_backroom:hs_partial_print",
+      "significance": "Tom wears size 11 dress shoes. Direct physical evidence he was there. Often missed by casual investigation."
+    },
+    {
+      "id": "ev_margaret_note",
+      "name": "Margaret's note 'S — 47k, talk Sun, police Mon'",
+      "discovery": "direct",
+      "found_at": "loc_backroom:hs_desk",
+      "significance": "Establishes Sarah motive."
+    },
+    {
+      "id": "ev_missing_paperweight",
+      "name": "Outline of missing paperweight",
+      "discovery": "direct",
+      "found_at": "loc_backroom:hs_paperweight_outline",
+      "significance": "Murder weapon. Was on Margaret's desk. Now missing. Square ~4 inches."
+    },
+    {
+      "id": "ev_margaret_cell_log_tom",
+      "name": "Tom called Margaret at 22:15",
+      "discovery": "direct (bakery phone log)",
+      "found_at": "loc_backroom:hs_phone",
+      "significance": "Proves Tom had reason to be in contact that night. He never volunteered this."
+    },
+    {
+      "id": "ev_dna_door_handle",
+      "name": "Two DNA profiles on back door handle",
+      "discovery": "direct",
+      "found_at": "loc_backroom:hs_door_handle_dna",
+      "significance": "Margaret + unknown male. When matched, identifies Daniel (he banged on the door)."
+    },
+    {
+      "id": "ev_bar_receipt",
+      "name": "Sarah left bar 23:04",
+      "discovery": "conversational",
+      "found_at": "loc_olive_bar:hs_receipts",
+      "significance": "Proves Sarah lied about her timing."
+    },
+    {
+      "id": "ev_bank_statements",
+      "name": "Bank statements showing $47k embezzlement",
+      "discovery": "progressive (David or Sarah authorizes)",
+      "significance": "Confirms Sarah's motive — but she's not the killer."
+    },
+    {
+      "id": "ev_phone_log",
+      "name": "David's call to Helen 22:30",
+      "discovery": "direct",
+      "found_at": "loc_cole_house:hs_home_phone",
+      "significance": "David's affair red herring."
+    },
+    {
+      "id": "ev_tom_margaret_affair",
+      "name": "Tom and Margaret had an affair 18 months ago",
+      "discovery": "conversational (Helen knows; Mrs. Carrington hints; or directly confront Tom if you suspect him)",
+      "significance": "Tom's hidden motive — but framed as 'old, resolved'."
+    },
+    {
+      "id": "ev_linda_divorce_filing",
+      "name": "Linda Brennan filed for divorce 2 weeks ago",
+      "discovery": "public records or asking Tom directly with suspicion",
+      "significance": "Tom lied about wife being home. His life is collapsing."
+    },
+    {
+      "id": "ev_tom_old_key",
+      "name": "Tom's old bakery back-door key",
+      "discovery": "warrant search of Tom's office",
+      "found_at": "loc_brennan_office:hs_office_desk",
+      "significance": "Means of access. Direct."
+    },
+    {
+      "id": "ev_security_camera_glimpse",
+      "name": "Street camera footage — man enters alley 23:38",
+      "discovery": "via Kevin's testimony unlock",
+      "significance": "Visual evidence of Tom going to bakery during murder window. Identification not 100% from footage alone."
+    },
+    {
+      "id": "ev_paperweight_in_creek",
+      "name": "Murder weapon in Mill Creek behind Tom's office",
+      "discovery": "warrant search after building case against Tom",
+      "found_at": "loc_brennan_office:hs_creek_behind",
+      "significance": "Physical murder weapon. Engraved bronze paperweight."
+    },
+    {
+      "id": "ev_dna_paperweight",
+      "name": "Tom's DNA on paperweight",
+      "discovery": "automatic after ev_paperweight_in_creek + Tom is interrogated",
+      "significance": "Conclusive. Final breakdown evidence for Tom."
+    },
+    {
+      "id": "ev_eleanor_witness_daniel",
+      "name": "Mrs. Carrington saw Daniel on Olive 21:45",
+      "discovery": "conversational",
+      "significance": "Establishes Daniel was nearby — supports red herring path."
+    },
+    {
+      "id": "ev_eleanor_witness_car",
+      "name": "Mrs. Carrington saw 'fancy car' near bakery 23:30",
+      "discovery": "conversational",
+      "significance": "Hints at Tom's arrival. Vague — anyone could match."
+    },
+    {
+      "id": "ev_eleanor_witness_helen",
+      "name": "Mrs. Carrington saw Helen visit David",
+      "discovery": "conversational",
+      "significance": "Confirms David's affair from outside source."
+    }
+  ],
+  "facts": [
+    {
+      "id": "fact_not_robbery",
+      "text": "Not a robbery."
+    },
+    {
+      "id": "fact_killer_had_key",
+      "text": "Killer had a key to the back door."
+    },
+    {
+      "id": "fact_struck_from_behind",
+      "text": "Margaret was struck from behind by someone she trusted."
+    },
+    {
+      "id": "fact_family_drifted",
+      "text": "The Cole family had grown distant in the last year."
+    }
+  ],
+  "endings": {
+    "truth": {
+      "name": "Truth",
+      "rating": "⭐⭐⭐⭐⭐",
+      "trigger": "Player accuses Tom Brennan with motive citing affair/divorce/business collapse, AND has presented to Tom (or has in evidence) at least 3 of: ev_paperweight_in_creek, ev_dna_paperweight, ev_security_camera_glimpse, ev_tom_old_key, ev_linda_divorce_filing, ev_tom_margaret_affair, ev_margaret_cell_log_tom",
+      "outcome_text": "Tom is convicted. The full picture comes out. You receive a commendation. Sarah faces embezzlement charges separately. Daniel is charged with disturbing the peace. The town reels but begins to heal."
+    },
+    "defensible_wrong_sarah": {
+      "name": "Defensible Wrong: Sarah",
+      "rating": "⭐⭐",
+      "trigger": "Player accuses Sarah Kim with motive citing embezzlement and presence at scene.",
+      "outcome_text": "Sarah is convicted of murder. She receives 18 years. The real killer goes free. You learn months later that you were wrong — Tom Brennan disappears from town. You will live with this."
+    },
+    "defensible_wrong_david": {
+      "name": "Defensible Wrong: David",
+      "rating": "⭐⭐",
+      "trigger": "Player accuses David Cole with motive citing affair and financial benefit.",
+      "outcome_text": "David is brought to trial. The affair becomes public. Despite no direct evidence, the jury convicts on circumstantial. He receives 15 years. Tyler is sent to live with his aunt. You suspect, eventually, that you were wrong. Tom Brennan disappears from town."
+    },
+    "defensible_wrong_daniel": {
+      "name": "Defensible Wrong: Daniel",
+      "rating": "⭐⭐",
+      "trigger": "Player accuses Daniel Kim with motive citing gambling debts, presence at scene (DNA on door), and Mrs. Carrington's testimony.",
+      "outcome_text": "Daniel is convicted. He gets 22 years. Sarah is destroyed. Their mother dies of grief within the year. Tom Brennan disappears from town. You will eventually wonder if you missed something."
+    },
+    "half_truth_partial": {
+      "name": "Half-Truth: Got Sarah for Embezzlement",
+      "rating": "⭐⭐⭐",
+      "trigger": "Player declines to accuse anyone for the murder, but presents evidence of Sarah's embezzlement to the DA.",
+      "outcome_text": "Sarah faces embezzlement charges. The murder remains unsolved. The town moves on uneasily. You have nightmares about who you missed."
+    },
+    "cold": {
+      "name": "Cold Case",
+      "rating": "⭐",
+      "trigger": "Player declines to accuse anyone, evidence insufficient.",
+      "outcome_text": "The case goes cold. Margaret's death is unsolved. Sarah inherits her share of the bakery. David moves away with Tyler. You think about it sometimes."
+    },
+    "bad_accusation": {
+      "name": "Reckless Accusation",
+      "rating": "0",
+      "trigger": "Player accuses someone with insufficient evidence (Tyler, Martin, Mrs. Carrington, Kevin, or Tom without sufficient evidence).",
+      "outcome_text": "Charges are dropped. Your reputation suffers. The real killer continues their life. Case remains open."
+    }
+  },
+  "share_config": {
+    "shareable_stats": [
+      "time_to_solve_minutes",
+      "evidence_found_count",
+      "ending_achieved",
+      "interrogations_count"
+    ],
+    "hidden_from_share": [
+      "killer_identity",
+      "specific_evidence",
+      "motive_details"
+    ]
+  }
+}
