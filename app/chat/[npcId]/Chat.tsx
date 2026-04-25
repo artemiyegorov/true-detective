@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { portraitVariantFor, portraitPath } from "@/lib/portrait";
 import type { NpcId } from "@/lib/npc";
-import { meetNpc, unlockLocation } from "@/lib/player-state";
+import { meetNpc, recordNpcReveal, unlockLocation } from "@/lib/player-state";
 
 type Msg = {
   role: "user" | "assistant";
@@ -100,6 +100,12 @@ export default function Chat({
         unlocks.forEach(unlockLocation);
         setUnlockToast(unlocks.join(", "));
         setTimeout(() => setUnlockToast(null), 4000);
+      }
+
+      // Append any facts the NPC just volunteered to their dossier.
+      const revealed = (dialogue.state?.revealed_info as string[] | undefined) ?? [];
+      if (revealed.length) {
+        recordNpcReveal(npcId, revealed);
       }
 
       setMessages([

@@ -3,19 +3,34 @@
 const KEY = "td.player.state.v1";
 
 export type PlayerState = {
+  /** location ids that are visible/clickable on the board */
   unlockedLocations: string[];
+  /** location ids the player has actually opened (location page mounted) */
+  visitedLocations: string[];
   unlockedHotspots: string[];
   discoveredEvidence: string[];
   discoveredFacts: string[];
+  /** npc ids the player has actually chatted with */
   metNpcs: string[];
+  /** flags set once for one-shot UI triggers (e.g. briefing seen) */
+  flags: string[];
+  /** evidence ids the player has pinned as important */
+  importantClues: string[];
+  /** facts that NPCs revealed during interviews, keyed by npc id */
+  revealedByNpc: Record<string, string[]>;
 };
 
 const DEFAULT_STATE: PlayerState = {
-  unlockedLocations: ["loc_bakery_main", "loc_backroom", "loc_cole_house"],
+  // Game starts at the crime scene only. Everything else unlocks by event.
+  unlockedLocations: ["loc_backroom"],
+  visitedLocations: [],
   unlockedHotspots: [],
   discoveredEvidence: [],
   discoveredFacts: [],
   metNpcs: [],
+  flags: [],
+  importantClues: [],
+  revealedByNpc: {},
 };
 
 function read(): PlayerState {
@@ -67,6 +82,43 @@ export function discoverFact(factId: string) {
 export function meetNpc(npcId: string) {
   const s = read();
   write({ ...s, metNpcs: addUnique(s.metNpcs, npcId) });
+}
+
+export function visitLocation(locId: string) {
+  const s = read();
+  write({
+    ...s,
+    visitedLocations: addUnique(s.visitedLocations, locId),
+    unlockedLocations: addUnique(s.unlockedLocations, locId),
+  });
+}
+
+export function setFlag(flag: string) {
+  const s = read();
+  write({ ...s, flags: addUnique(s.flags, flag) });
+}
+
+export function hasFlag(flag: string): boolean {
+  return read().flags.includes(flag);
+}
+
+export function pinImportant(evidenceId: string) {
+  const s = read();
+  write({ ...s, importantClues: addUnique(s.importantClues, evidenceId) });
+}
+
+export function unpinImportant(evidenceId: string) {
+  const s = read();
+  write({ ...s, importantClues: s.importantClues.filter(id => id !== evidenceId) });
+}
+
+export function recordNpcReveal(npcId: string, info: string[]) {
+  if (!info.length) return;
+  const s = read();
+  const prev = s.revealedByNpc[npcId] ?? [];
+  const merged = [...prev];
+  for (const f of info) if (!merged.includes(f)) merged.push(f);
+  write({ ...s, revealedByNpc: { ...s.revealedByNpc, [npcId]: merged } });
 }
 
 export function resetPlayerState() {

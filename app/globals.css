@@ -19,13 +19,14 @@ html, body {
 }
 
 body {
-  font-family: var(--font-fell), Georgia, "Times New Roman", serif;
+  font-family: var(--font-body), Georgia, "Times New Roman", serif;
   font-feature-settings: "kern", "liga";
   text-rendering: optimizeLegibility;
 }
 
 .font-elite { font-family: var(--font-elite), "Courier New", monospace; }
-.font-fell  { font-family: var(--font-fell),  Georgia, serif; }
+.font-fell  { font-family: var(--font-body),  Georgia, serif; }
+.font-body  { font-family: var(--font-body),  Georgia, serif; }
 
 /* Subtle film grain over the whole board.
    Single SVG noise tile, blended low. */

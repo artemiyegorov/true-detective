@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Special_Elite, IM_Fell_English } from "next/font/google";
+import { Special_Elite, Lora } from "next/font/google";
 import "./globals.css";
 
 const elite = Special_Elite({
@@ -10,13 +10,14 @@ const elite = Special_Elite({
   adjustFontFallback: false,
 });
 
-const fell = IM_Fell_English({
-  weight: "400",
+// Lora — modern serif, very readable at body sizes, still has character.
+// Replaces IM Fell English which was too decorative for paragraph text.
+const lora = Lora({
   subsets: ["latin"],
   style: ["normal", "italic"],
-  variable: "--font-fell",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
   display: "swap",
-  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${elite.variable} ${fell.variable} antialiased`}>
+      <body className={`${elite.variable} ${lora.variable} antialiased`}>
         {children}
       </body>
     </html>

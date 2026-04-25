@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   discoverEvidence,
   discoverFact,
   getState,
+  hasFlag,
+  setFlag,
+  visitLocation,
   type PlayerState,
 } from "@/lib/player-state";
 
@@ -32,15 +36,18 @@ export default function LocationView({
   hotspots,
   evidenceMap,
   factsMap,
+  briefing,
 }: {
   locId: string;
   locName: string;
   hotspots: Hotspot[];
   evidenceMap: Record<string, { id: string; name: string; significance: string }>;
   factsMap: Record<string, string>;
+  briefing: { narrator_script: string; key_facts: string[]; your_task: string } | null;
 }) {
   const [state, setState] = useState<PlayerState | null>(null);
   const [reveal, setReveal] = useState<RevealedItem | null>(null);
+  const [showBriefing, setShowBriefing] = useState(false);
 
   useEffect(() => {
     setState(getState());
@@ -48,6 +55,16 @@ export default function LocationView({
     window.addEventListener("td-state-change", handler);
     return () => window.removeEventListener("td-state-change", handler);
   }, []);
+
+  // Track the visit and show the officer's briefing only the first time
+  // the player enters the crime scene.
+  useEffect(() => {
+    visitLocation(locId);
+    if (briefing && !hasFlag("seen-briefing")) {
+      setShowBriefing(true);
+      setFlag("seen-briefing");
+    }
+  }, [locId, briefing]);
 
   function clickHotspot(hs: Hotspot) {
     if (hs.reveals?.type === "evidence") {
@@ -133,7 +150,67 @@ export default function LocationView({
       </ul>
 
       {reveal && <RevealModal reveal={reveal} onClose={() => setReveal(null)} />}
+
+      <AnimatePresence>
+        {showBriefing && briefing && (
+          <BriefingModal briefing={briefing} onClose={() => setShowBriefing(false)} />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function BriefingModal({
+  briefing,
+  onClose,
+}: {
+  briefing: { narrator_script: string; key_facts: string[]; your_task: string };
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="bg-[#15161f] ring-1 ring-amber-700/40 rounded-md max-w-xl w-full p-6 space-y-4"
+        initial={{ scale: 0.92, y: 12 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, y: 12 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-amber-300">
+          The duty officer briefs you
+        </p>
+        <p className="font-fell text-base text-neutral-200 leading-relaxed">
+          {briefing.narrator_script}
+        </p>
+        <div>
+          <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-2">
+            Key facts
+          </p>
+          <ul className="font-fell text-sm text-neutral-300 space-y-1 list-['—_'] pl-4">
+            {briefing.key_facts.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </div>
+        <p className="font-fell italic text-sm text-neutral-400 border-l-2 border-amber-700/40 pl-3">
+          {briefing.your_task}
+        </p>
+        <div className="pt-2 flex justify-end">
+          <button
+            onClick={onClose}
+            className="font-elite text-xs uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-4 py-2 hover:bg-white"
+          >
+            Get to work
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

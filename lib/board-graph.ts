@@ -11,10 +11,12 @@ export type BoardNode = {
   y: number;
   /** locked nodes are completely hidden until visible(state) returns true */
   visible: (s: PlayerState) => boolean;
-  /** routing target on click; for clues we open a modal instead */
-  href?: string;
-  /** for clue nodes only — id of the evidence in case JSON */
-  evidenceId?: string;
+  /** for clue nodes — case evidence id; for person nodes — chat npc id; for locations — case loc id */
+  refId?: string;
+  /** image path for the card (people: portrait jpg; locations: optional bg) */
+  image?: string;
+  /** static role / one-line dossier line (people only) */
+  role?: string;
   /** short hover text */
   hint?: string;
 };
@@ -32,9 +34,16 @@ const has = <T>(arr: T[], v: T) => arr.includes(v);
 
 // === People ===
 //
-// Initial roster present at the bakery on Monday morning per the ground
-// truth opening scene (Margaret + David + Tom + Martin). Sarah, Tyler,
-// Daniel, Kevin and Eleanor are gated by a discovery condition.
+// Stricter progression per gameplay design:
+//   • initial board: only the crime scene (loc_backroom) is visible
+//   • visiting backroom triggers the briefing → unlocks Margaret, David,
+//     Martin and the bakery front
+//   • talking to Martin unlocks Sarah
+//   • talking to David unlocks Tyler, Eleanor and the Cole house
+//   • everything else gates on later discoveries
+
+const VISITED_BACKROOM = (s: PlayerState) => has(s.visitedLocations, "loc_backroom");
+const MET = (npc: string) => (s: PlayerState) => has(s.metNpcs, npc);
 
 const people: BoardNode[] = [
   {
@@ -42,84 +51,102 @@ const people: BoardNode[] = [
     kind: "person",
     label: "Margaret Cole",
     x: 50, y: 35,
-    visible: ALWAYS,
-    hint: "Victim. 54. Bakery owner.",
+    visible: VISITED_BACKROOM,
+    role: "Victim · 54 · Bakery owner",
+    hint: "Found dead in the backroom Monday morning.",
   },
   {
     id: "p:david",
     kind: "person",
     label: "David Cole",
     x: 28, y: 22,
-    visible: ALWAYS,
+    refId: "david",
     href: "/chat/david",
-    hint: "Husband. Grieving at the scene.",
-  },
-  {
-    id: "p:tom",
-    kind: "person",
-    label: "Tom Brennan",
-    x: 72, y: 22,
-    visible: ALWAYS,
-    href: "/chat/tom",
-    hint: "Family friend. Brought coffee Monday morning.",
+    visible: VISITED_BACKROOM,
+    role: "Husband · 58 · Co-owner of the bakery",
+    hint: "Grieving. At the scene Monday morning.",
   },
   {
     id: "p:martin",
     kind: "person",
     label: "Martin Reyes",
     x: 50, y: 60,
-    visible: ALWAYS,
+    refId: "martin",
     href: "/chat/martin",
-    hint: "Baker. Found the body, called 911.",
+    visible: VISITED_BACKROOM,
+    role: "Baker · 24 · Worked under Margaret",
+    hint: "Found the body. Called 911 at 06:47.",
+  },
+  {
+    id: "p:tom",
+    kind: "person",
+    label: "Tom Brennan",
+    x: 72, y: 22,
+    refId: "tom",
+    href: "/chat/tom",
+    image: "/portraits/tom-warm.jpg",
+    visible: s => VISITED_BACKROOM(s) || MET("david")(s) || MET("martin")(s),
+    role: "Family friend · 52 · Real estate broker",
+    hint: "Brought coffee and condolences Monday morning.",
   },
   {
     id: "p:sarah",
     kind: "person",
     label: "Sarah Kim",
     x: 78, y: 50,
+    refId: "sarah",
     href: "/chat/sarah",
+    image: "/portraits/sarah-calm.jpg",
     visible: s =>
-      has(s.metNpcs, "david") ||
-      has(s.metNpcs, "tom") ||
-      has(s.metNpcs, "martin") ||
+      MET("martin")(s) ||
+      MET("david")(s) ||
       has(s.discoveredEvidence, "ev_margaret_note"),
-    hint: "Business partner. Mentioned by David / Margaret's note.",
+    role: "Business partner · 41 · 3 years at the bakery",
+    hint: "Margaret's partner. Mentioned by Martin / David / her own note.",
   },
   {
     id: "p:tyler",
     kind: "person",
     label: "Tyler Cole",
     x: 14, y: 35,
+    refId: "tyler",
     href: "/chat/tyler",
-    visible: s => has(s.metNpcs, "david") || has(s.unlockedLocations, "loc_cole_house"),
-    hint: "Son, 16. Was at a sleepover Sunday night.",
-  },
-  {
-    id: "p:daniel",
-    kind: "person",
-    label: "Daniel Kim",
-    x: 92, y: 62,
-    href: "/chat/daniel",
-    visible: s => has(s.metNpcs, "sarah") || has(s.metNpcs, "eleanor"),
-    hint: "Sarah's brother. Gambling debts.",
-  },
-  {
-    id: "p:kevin",
-    kind: "person",
-    label: "Kevin Pratt",
-    x: 92, y: 38,
-    href: "/chat/kevin",
-    visible: s => has(s.unlockedLocations, "loc_olive_bar") || has(s.metNpcs, "sarah"),
-    hint: "Bartender at 'Olive'.",
+    role: "Son · 16 · At a sleepover Sunday night",
+    visible: s => MET("david")(s) || has(s.visitedLocations, "loc_cole_house"),
+    hint: "Was at Jake Morrison's. Ironclad alibi.",
   },
   {
     id: "p:eleanor",
     kind: "person",
     label: "Mrs. Eleanor Carrington",
     x: 8, y: 62,
+    refId: "eleanor",
     href: "/chat/eleanor",
-    visible: s => has(s.metNpcs, "david") || has(s.unlockedLocations, "loc_cole_house"),
-    hint: "Elderly neighbor. Sees a lot from her porch.",
+    role: "Neighbor · ~80 · Watches the street from her porch",
+    visible: s => MET("david")(s) || has(s.visitedLocations, "loc_cole_house"),
+    hint: "Unreliable witness — real and confused memories mixed.",
+  },
+  {
+    id: "p:daniel",
+    kind: "person",
+    label: "Daniel Kim",
+    x: 92, y: 62,
+    refId: "daniel",
+    href: "/chat/daniel",
+    role: "Sarah's brother · gambling debts",
+    visible: s => MET("sarah")(s) || MET("eleanor")(s),
+    hint: "Was nearby Sunday night per Mrs. Carrington's testimony.",
+  },
+  {
+    id: "p:kevin",
+    kind: "person",
+    label: "Kevin Pratt",
+    x: 92, y: 38,
+    refId: "kevin",
+    href: "/chat/kevin",
+    role: "Bartender at 'Olive' · friendly",
+    visible: s => has(s.unlockedLocations, "loc_olive_bar"),
+    hint: "Bartender at 'Olive'. Confirms Sarah's bar timing.",
   },
 ];
 
@@ -127,47 +154,57 @@ const people: BoardNode[] = [
 
 const locations: BoardNode[] = [
   {
-    id: "l:bakery_main",
-    kind: "location",
-    label: "Cole & Sons Bakery",
-    x: 50, y: 80,
-    href: "/location/loc_bakery_main",
-    visible: ALWAYS,
-    hint: "Front of the shop. Crime scene tape on the back door.",
-  },
-  {
     id: "l:backroom",
     kind: "location",
     label: "Bakery Backroom",
-    x: 36, y: 90,
+    x: 50, y: 78,
+    refId: "loc_backroom",
     href: "/location/loc_backroom",
+    role: "Crime scene · access via the bakery front",
     visible: ALWAYS,
     hint: "Crime scene. Margaret was found here.",
+  },
+  {
+    id: "l:bakery_main",
+    kind: "location",
+    label: "Cole & Sons Bakery",
+    x: 64, y: 86,
+    refId: "loc_bakery_main",
+    href: "/location/loc_bakery_main",
+    role: "Front of the shop · public area",
+    visible: VISITED_BACKROOM,
+    hint: "Front of the shop. Crime scene tape on the back door.",
   },
   {
     id: "l:cole_house",
     kind: "location",
     label: "Cole Family Home",
-    x: 14, y: 80,
+    x: 16, y: 80,
+    refId: "loc_cole_house",
     href: "/location/loc_cole_house",
-    visible: ALWAYS,
-    hint: "The Coles' house.",
+    role: "The Coles' house · upstairs is Tyler's room",
+    visible: s => MET("david")(s),
+    hint: "Where David and Tyler live.",
   },
   {
     id: "l:olive_bar",
     kind: "location",
     label: "'Olive' Bar",
     x: 86, y: 80,
+    refId: "loc_olive_bar",
     href: "/location/loc_olive_bar",
+    role: "Bar on Olive Street · Kevin tends",
     visible: s => has(s.unlockedLocations, "loc_olive_bar"),
-    hint: "Bar on Olive Street. Sarah was here Sunday night.",
+    hint: "Sarah was here Sunday night.",
   },
   {
     id: "l:brennan_office",
     kind: "location",
     label: "Brennan Real Estate",
     x: 92, y: 92,
+    refId: "loc_brennan_office",
     href: "/location/loc_brennan_office",
+    role: "Tom's office · Mill Creek runs behind",
     visible: s => has(s.unlockedLocations, "loc_brennan_office"),
     hint: "Tom's office. Mill Creek runs behind it.",
   },

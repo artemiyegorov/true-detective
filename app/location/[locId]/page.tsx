@@ -35,6 +35,14 @@ export default async function LocationPage({ params }: { params: { locId: string
   const factsMap: Record<string, string> = {};
   for (const f of ground.facts) factsMap[f.id] = f.text;
 
+  // Briefing only renders for the crime scene on first visit. Pass the
+  // narrator script + key facts from the case JSON.
+  const briefing = (loc.id as string) === "loc_backroom" ? {
+    narrator_script: ground.briefing.narrator_script,
+    key_facts: ground.briefing.key_facts,
+    your_task: ground.briefing.your_task,
+  } : null;
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <LocationView
@@ -43,6 +51,7 @@ export default async function LocationPage({ params }: { params: { locId: string
         hotspots={hotspots}
         evidenceMap={evidenceMap}
         factsMap={factsMap}
+        briefing={briefing}
       />
     </main>
   );
