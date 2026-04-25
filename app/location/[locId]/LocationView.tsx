@@ -159,12 +159,7 @@ export default function LocationView({
             home
           </Link>
           <div className="flex justify-center"><Tabs /></div>
-          <Link
-            href="/board"
-            className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-300 hover:text-white"
-          >
-            ← board
-          </Link>
+          <span />
         </div>
         <div className="absolute bottom-4 left-6 right-6">
           <p className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-400">Location</p>

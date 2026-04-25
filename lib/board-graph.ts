@@ -85,7 +85,14 @@ const people: BoardNode[] = [
     refId: "tom",
     href: "/chat/tom",
     image: "/portraits/tom-warm.jpg",
-    visible: s => VISITED_BACKROOM(s) || MET("david")(s) || MET("martin")(s),
+    // Tom isn't on the board on day one — he comes in once a person
+    // mentions him or evidence ties him to the case (the cell log is the
+    // natural anchor since it traces a number to his name).
+    visible: s =>
+      MET("david")(s) ||
+      MET("martin")(s) ||
+      has(s.discoveredEvidence, "ev_margaret_cell_log_tom") ||
+      has(s.discoveredEvidence, "ev_partial_footprint_size_11"),
     role: "Family friend · 52 · Real estate broker",
     hint: "Brought coffee and condolences Monday morning.",
   },

@@ -45,14 +45,13 @@ export type GroundTruth = {
   endings: Record<string, { name: string; rating: string; trigger: string; outcome_text: string }>;
 };
 
-let cached: GroundTruth | null = null;
-
+// Caching the case JSON in memory was a small perf win but it broke
+// hot-reload in dev: editing the JSON didn't show until a server
+// restart. Keep it simple — re-read on every request. The file is small.
 export async function loadCase(): Promise<GroundTruth> {
-  if (cached) return cached;
   const file = path.join(process.cwd(), "docs", "case_001_bakery_open.json");
   const raw = await readFile(file, "utf8");
-  cached = JSON.parse(raw) as GroundTruth;
-  return cached;
+  return JSON.parse(raw) as GroundTruth;
 }
 
 export async function evidenceById(id: string): Promise<Evidence | undefined> {

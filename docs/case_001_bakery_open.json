@@ -993,118 +993,118 @@
       "name": "Size 12 boot print",
       "discovery": "direct",
       "found_at": "loc_backroom:hs_footprint",
-      "significance": "Implicates Sarah (her boot size). Red herring — she WAS there but didn't kill Margaret."
+      "significance": "A clear boot print on the floor near the back door — sole pattern of a combat-style boot, US size 12. The print is fresh."
     },
     {
       "id": "ev_partial_footprint_size_11",
       "name": "Partial size 11 dress shoe print",
       "discovery": "direct",
       "found_at": "loc_backroom:hs_partial_print",
-      "significance": "Tom wears size 11 dress shoes. Direct physical evidence he was there. Often missed by casual investigation."
+      "significance": "A partial print near where the body fell — smaller, smudged, looks like a dress-shoe sole, roughly US size 11."
     },
     {
       "id": "ev_margaret_note",
       "name": "Margaret's note 'S — 47k, talk Sun, police Mon'",
       "discovery": "direct",
       "found_at": "loc_backroom:hs_desk",
-      "significance": "Establishes Sarah motive."
+      "significance": "A handwritten note in Margaret's pad: 'S — 47k, talk Sun eve, police Mon AM.'"
     },
     {
       "id": "ev_missing_paperweight",
       "name": "Outline of missing paperweight",
       "discovery": "direct",
       "found_at": "loc_backroom:hs_paperweight_outline",
-      "significance": "Murder weapon. Was on Margaret's desk. Now missing. Square ~4 inches."
+      "significance": "A square outline in the dust on Margaret's desk where something heavy used to sit — about four inches across. Whatever was there is gone."
     },
     {
       "id": "ev_margaret_cell_log_tom",
       "name": "Tom called Margaret at 22:15",
       "discovery": "direct (bakery phone log)",
       "found_at": "loc_backroom:hs_phone",
-      "significance": "Proves Tom had reason to be in contact that night. He never volunteered this."
+      "significance": "Bakery call log: an incoming call Sunday at 22:15, nine minutes long, from a cell number registered to Tom Brennan."
     },
     {
       "id": "ev_dna_door_handle",
       "name": "Two DNA profiles on back door handle",
       "discovery": "direct",
       "found_at": "loc_backroom:hs_door_handle_dna",
-      "significance": "Margaret + unknown male. When matched, identifies Daniel (he banged on the door)."
+      "significance": "Forensics finds two DNA profiles on the back door handle — Margaret's, and an unknown male's. The unknown profile would need to be matched against a suspect sample to identify a person."
     },
     {
       "id": "ev_bar_receipt",
       "name": "Sarah left bar 23:04",
       "discovery": "conversational",
       "found_at": "loc_olive_bar:hs_receipts",
-      "significance": "Proves Sarah lied about her timing."
+      "significance": "A timestamped tab from 'Olive': Sarah's table opened at 22:03 and closed at 23:04 — four drinks, paid in cash."
     },
     {
       "id": "ev_bank_statements",
       "name": "Bank statements showing $47k embezzlement",
       "discovery": "progressive (David or Sarah authorizes)",
-      "significance": "Confirms Sarah's motive — but she's not the killer."
+      "significance": "Eight months of statements for the bakery's business account. A series of transfers totalling about $47,000 going to accounts in the name 'Daniel Kim'."
     },
     {
       "id": "ev_phone_log",
       "name": "David's call to Helen 22:30",
       "discovery": "direct",
       "found_at": "loc_cole_house:hs_home_phone",
-      "significance": "David's affair red herring."
+      "significance": "The Coles' home phone log shows an outgoing call Sunday at 22:30, fourteen minutes long, to (555)-0137 — a number registered to Helen Voss."
     },
     {
       "id": "ev_tom_margaret_affair",
       "name": "Tom and Margaret had an affair 18 months ago",
       "discovery": "conversational (Helen knows; Mrs. Carrington hints; or directly confront Tom if you suspect him)",
-      "significance": "Tom's hidden motive — but framed as 'old, resolved'."
+      "significance": "Margaret had a four-month relationship with Tom Brennan ending around 18 months ago. Both sides describe it as over."
     },
     {
       "id": "ev_linda_divorce_filing",
       "name": "Linda Brennan filed for divorce 2 weeks ago",
       "discovery": "public records or asking Tom directly with suspicion",
-      "significance": "Tom lied about wife being home. His life is collapsing."
+      "significance": "Public-records search: Linda Brennan filed for divorce two weeks ago. The filing has not been publicised."
     },
     {
       "id": "ev_tom_old_key",
       "name": "Tom's old bakery back-door key",
       "discovery": "warrant search of Tom's office",
       "found_at": "loc_brennan_office:hs_office_desk",
-      "significance": "Means of access. Direct."
+      "significance": "A small brass key in the bottom drawer of Tom's office desk, labelled 'Cole & Sons back'. Old, slightly dusty."
     },
     {
       "id": "ev_security_camera_glimpse",
       "name": "Street camera footage — man enters alley 23:38",
       "discovery": "via Kevin's testimony unlock",
-      "significance": "Visual evidence of Tom going to bakery during murder window. Identification not 100% from footage alone."
+      "significance": "Grainy footage from a street camera across from the bakery: a man matching Tom's height and build entering the alley at 23:38. Face not clearly visible."
     },
     {
       "id": "ev_paperweight_in_creek",
       "name": "Murder weapon in Mill Creek behind Tom's office",
       "discovery": "warrant search after building case against Tom",
       "found_at": "loc_brennan_office:hs_creek_behind",
-      "significance": "Physical murder weapon. Engraved bronze paperweight."
+      "significance": "Recovered from Mill Creek behind Brennan Real Estate: a heavy bronze paperweight, engraved 'Millbrook Chamber of Commerce 2019'."
     },
     {
       "id": "ev_dna_paperweight",
       "name": "Tom's DNA on paperweight",
       "discovery": "automatic after ev_paperweight_in_creek + Tom is interrogated",
-      "significance": "Conclusive. Final breakdown evidence for Tom."
+      "significance": "Lab results from the recovered paperweight: skin-cell DNA on the grip matches Tom Brennan."
     },
     {
       "id": "ev_eleanor_witness_daniel",
       "name": "Mrs. Carrington saw Daniel on Olive 21:45",
       "discovery": "conversational",
-      "significance": "Establishes Daniel was nearby — supports red herring path."
+      "significance": "Mrs. Carrington recalls seeing Daniel Kim on Olive Street around 21:45 Sunday, walking toward the bakery."
     },
     {
       "id": "ev_eleanor_witness_car",
       "name": "Mrs. Carrington saw 'fancy car' near bakery 23:30",
       "discovery": "conversational",
-      "significance": "Hints at Tom's arrival. Vague — anyone could match."
+      "significance": "Mrs. Carrington remembers a 'fancy car' parked near the bakery around 23:30. She can't describe it precisely."
     },
     {
       "id": "ev_eleanor_witness_helen",
       "name": "Mrs. Carrington saw Helen visit David",
       "discovery": "conversational",
-      "significance": "Confirms David's affair from outside source."
+      "significance": "Mrs. Carrington has seen Helen Voss visiting the Cole house several times when Margaret wasn't home."
     }
   ],
   "facts": [

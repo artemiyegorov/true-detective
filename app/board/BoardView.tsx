@@ -50,7 +50,11 @@ export default function BoardView({
 
   const data = useMemo(() => {
     if (!state) return { nodes: [], edges: [], visibleIds: new Set<string>() };
-    const nodes = visibleNodes(state);
+    // Clues live in the Casebook, not on the board. Keep only people +
+    // locations on the cork wall. Edges between clue nodes are filtered
+    // out automatically by visibleEdges since the clue ids aren't in
+    // visibleIds.
+    const nodes = visibleNodes(state).filter(n => n.kind !== "clue");
     const visibleIds = new Set(nodes.map(n => n.id));
     const edges = visibleEdges(state, visibleIds);
     return { nodes, edges, visibleIds };
