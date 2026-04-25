@@ -11,10 +11,12 @@ const TOM_VARIANTS: Record<string, PortraitVariant> = {
   broken: "broken", hollow: "broken", stonewalling: "broken", hysterical: "broken",
 };
 
+// Sarah has 4 hand-curated portrait variants: calm / guarded / panicked / broken.
+// Less-extreme moods (nervous/tense/defensive) collapse into `guarded`.
 const SARAH_VARIANTS: Record<string, PortraitVariant> = {
   calm: "calm", warm: "calm", cooperative: "calm", helpful: "calm",
   guarded: "guarded", thoughtful: "guarded", grieving: "guarded",
-  nervous: "nervous", defensive: "nervous", tense: "nervous",
+  nervous: "guarded", defensive: "guarded", tense: "guarded",
   panicked: "panicked", scared: "panicked", angry: "panicked",
   broken: "broken", hysterical: "broken", hollow: "broken", sad: "broken",
 };

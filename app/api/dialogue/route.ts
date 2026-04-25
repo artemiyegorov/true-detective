@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { anthropic, MODEL_DIALOGUE } from "@/lib/anthropic";
 import { loadNpcSystemPrompt, npcDisplayName, isNpcId, type NpcId } from "@/lib/npc";
-import { evidenceById } from "@/lib/case";
+import { evidenceById, loadCase } from "@/lib/case";
 import { cleanForDisplay } from "@/lib/elevenlabs";
 
 export const runtime = "nodejs";
@@ -111,9 +111,59 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Keyword-driven location unlocks: scan player message + NPC reply for
+  // unlock_triggers configured in the case JSON.
+  const lastPlayerMsg = [...apiMessages].reverse().find(m => m.role === "user")?.content ?? "";
+  const unlockedLocations = await detectLocationUnlocks(
+    npcId as NpcId,
+    lastPlayerMsg,
+    json.voice_text,
+  );
+
   return NextResponse.json({
     voice_text: json.voice_text,
     voice_text_clean: cleanForDisplay(json.voice_text),
     state: json.state,
+    unlocked_locations: unlockedLocations,
   });
+}
+
+type UnlockTrigger =
+  | { type: "npc_mentions"; npc_id: string; keywords?: string[]; unlockable_action_id?: string }
+  | { type: "player_mentions"; keywords: string[] }
+  | { type: string; [k: string]: unknown };
+
+async function detectLocationUnlocks(
+  npcId: NpcId,
+  playerText: string,
+  npcText: string,
+): Promise<string[]> {
+  const ground = await loadCase();
+  const playerLower = playerText.toLowerCase();
+  const npcLower = npcText.toLowerCase();
+  const charId = `char_${npcId}`;
+  const unlocked: string[] = [];
+
+  for (const loc of ground.locations) {
+    if (loc.available_from_start) continue;
+    const triggers = (loc.unlock_triggers as UnlockTrigger[] | undefined) ?? [];
+    for (const t of triggers) {
+      if (t.type === "player_mentions" && Array.isArray(t.keywords)) {
+        if (t.keywords.some(k => playerLower.includes(k.toLowerCase()))) {
+          unlocked.push(loc.id as string);
+          break;
+        }
+      } else if (
+        t.type === "npc_mentions" &&
+        t.npc_id === charId &&
+        Array.isArray(t.keywords)
+      ) {
+        if (t.keywords.some(k => npcLower.includes(k.toLowerCase()))) {
+          unlocked.push(loc.id as string);
+          break;
+        }
+      }
+    }
+  }
+  return unlocked;
 }

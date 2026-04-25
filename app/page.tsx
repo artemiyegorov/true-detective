@@ -9,14 +9,30 @@ export default function Home() {
         <p className="text-neutral-400">
           Five people had reasons. One of them did it. Build your case.
         </p>
-        <div className="pt-4 flex flex-col gap-3 items-center">
+        <div className="pt-4 grid gap-3">
           <Link
-            href="/chat/tom"
+            href="/map"
             className="rounded-md bg-neutral-100 text-neutral-900 px-5 py-2.5 text-sm font-medium hover:bg-white transition"
           >
-            Interview: Tom Brennan →
+            Open the case map →
           </Link>
-          <p className="text-xs text-neutral-600">Slice 1 — single-NPC chat with voice</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/chat/tom"
+              className="rounded-md bg-neutral-900 ring-1 ring-neutral-800 px-4 py-2 text-sm hover:bg-neutral-800 transition"
+            >
+              Interview Tom
+            </Link>
+            <Link
+              href="/chat/sarah"
+              className="rounded-md bg-neutral-900 ring-1 ring-neutral-800 px-4 py-2 text-sm hover:bg-neutral-800 transition"
+            >
+              Interview Sarah
+            </Link>
+          </div>
+          <p className="text-xs text-neutral-600 pt-2">
+            slice 1 demo · Tom + Sarah · map · 5 locations
+          </p>
         </div>
       </div>
     </main>

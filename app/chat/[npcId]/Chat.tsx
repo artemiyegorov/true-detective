@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { portraitVariantFor, portraitPath } from "@/lib/portrait";
 import type { NpcId } from "@/lib/npc";
+import { meetNpc, unlockLocation } from "@/lib/player-state";
 
 type Msg = {
   role: "user" | "assistant";
@@ -39,8 +40,13 @@ export default function Chat({
   const [mood, setMood] = useState<string>(INITIAL_MOODS[npcId] ?? "calm");
   const [evidencePresented, setEvidencePresented] = useState<string[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
+  const [unlockToast, setUnlockToast] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    meetNpc(npcId);
+  }, [npcId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -87,6 +93,14 @@ export default function Chat({
         ? [...evidencePresented, newEvidenceId]
         : evidencePresented;
       setEvidencePresented(updatedEvidence);
+
+      // Apply server-detected location unlocks to player state.
+      const unlocks = (dialogue.unlocked_locations as string[] | undefined) ?? [];
+      if (unlocks.length) {
+        unlocks.forEach(unlockLocation);
+        setUnlockToast(unlocks.join(", "));
+        setTimeout(() => setUnlockToast(null), 4000);
+      }
 
       setMessages([
         ...newHistory,
@@ -152,6 +166,11 @@ export default function Chat({
             className="w-full h-full object-cover transition-opacity duration-500"
           />
         </div>
+        {unlockToast && (
+          <div className="absolute bottom-2 right-3 max-w-[60%] rounded-md bg-emerald-900/80 ring-1 ring-emerald-700 text-emerald-100 text-xs px-3 py-2 shadow-lg">
+            🗺 New location unlocked: <span className="font-medium">{unlockToast}</span>
+          </div>
+        )}
       </div>
 
       {/* messages */}
