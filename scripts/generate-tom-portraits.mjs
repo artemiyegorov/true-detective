@@ -1,62 +1,107 @@
 import { fal } from "@fal-ai/client";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 if (!process.env.FAL_KEY) {
-  console.error("FAL_KEY missing — run with: node --env-file=.env.local scripts/generate-tom-portraits.mjs");
+  console.error("FAL_KEY missing — run: node --env-file=.env.local scripts/generate-tom-portraits.mjs [verify|all]");
   process.exit(1);
 }
 
 fal.config({ credentials: process.env.FAL_KEY });
 
-const STYLE = `Cinematic illustration style, grounded realism, muted cinematic color palette with desaturated blues and warm tungsten highlights, film noir meets contemporary small-town drama. Visual references: "Mare of Easttown", "Sharp Objects", "True Detective season 1". Soft directional lighting, natural imperfections, no glossy stylization. Photorealistic illustration, not pure photograph.`;
+// Source of truth for prompts: docs/image-prompts.md.
+// We use OpenAI gpt-image-2 edit (via fal.ai) which expects the two-column
+// "Change only: ... / Preserve: ..." pattern. The .md file holds:
+//   - one shared "preserve list" (repeated verbatim every iteration)
+//   - one "change only" block per variant
+// The script combines them into the two-column prompt sent to gpt-image-2.
 
-const TOM_BASE = `Portrait of Tom Brennan, a 52-year-old white American man, 5'11" with broad shoulders, grayish-brown receding hair neatly combed, clean-shaven with a faint shadow, warm hazel eyes with the beginnings of laugh lines. Wearing a tailored navy blazer over a crisp light-blue button-down shirt (top button undone, no tie), khaki dress pants. A wedding ring on his left hand. A subtle wristwatch.`;
+const PROMPT_FILE = path.join(process.cwd(), "docs", "image-prompts.md");
 
-const VARIANTS = [
-  {
-    key: "warm",
-    prompt: `${TOM_BASE} Expression: warm, sympathetic, slightly somber — the look of a family friend offering condolences. Standing in the bakery's front area, soft morning light from the window, slightly blurred crime scene tape visible in the background. Natural skin texture, age-appropriate lines, healthy color but a hint of fatigue around the eyes. ${STYLE}`,
-  },
-  {
-    key: "guarded",
-    prompt: `${TOM_BASE} Expression: composed but tense, jaw slightly tightened, eyes fixed forward, mouth in a controlled neutral line. Body language: seated at an interrogation table, hands clasped on the surface, shoulders squared, posture upright. Cold fluorescent overhead lighting. Subtle sheen of sweat at the temple. ${STYLE}`,
-  },
-  {
-    key: "cracking",
-    prompt: `${TOM_BASE} Expression: visible vulnerability, brow furrowed, eyes slightly unfocused looking down and to the side, lips parted as if holding back words, jaw less controlled. Body language: one hand running through his hair, the other gripping the edge of the table. Cold interrogation lighting. The salesman polish is gone — beneath it is exhaustion. ${STYLE}`,
-  },
-  {
-    key: "broken",
-    prompt: `${TOM_BASE} Expression: hollow, defeated, eyes wet but not crying, mouth slack, looking at nothing. Body language: shoulders collapsed forward, arms loose at sides, head bowed slightly. The mask is completely off. Cold interrogation lighting. The look of a man whose life is over and who knows it. ${STYLE}`,
-  },
-];
+async function loadPrompts() {
+  const md = await readFile(PROMPT_FILE, "utf8");
+
+  function extract(heading) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(
+      `####\\s+${escaped}[^\\n]*\\n(?:(?!####)[\\s\\S])*?\`{3}\\n([\\s\\S]*?)\\n\`{3}`,
+    );
+    const m = md.match(re);
+    if (!m) throw new Error(`prompt section not found: ${heading}`);
+    return m[1].trim();
+  }
+
+  return {
+    preserve: extract("Tom — preserve list"),
+    guarded: extract("Tom — variant: guarded"),
+    cracking: extract("Tom — variant: cracking"),
+    broken: extract("Tom — variant: broken"),
+  };
+}
+
+function buildEditPrompt(changeOnly, preserve) {
+  return `Change only:\n${changeOnly}\n\nPreserve (must remain pixel-identical to the reference):\n${preserve}`;
+}
 
 const OUT_DIR = path.join(process.cwd(), "public", "portraits");
-await mkdir(OUT_DIR, { recursive: true });
+const WARM_PATH = path.join(OUT_DIR, "tom-warm.jpg");
 
-for (const v of VARIANTS) {
-  console.log(`generating tom-${v.key}…`);
-  const result = await fal.subscribe("fal-ai/flux-pro/v1.1", {
+async function gptImage2Edit(prompt, refUrl) {
+  const result = await fal.subscribe("openai/gpt-image-2/edit", {
     input: {
-      prompt: v.prompt,
-      image_size: { width: 832, height: 1248 },
+      prompt,
+      image_urls: [refUrl],
+      image_size: "portrait_4_3",
+      quality: "high",
       num_images: 1,
-      seed: 42101,
-      enable_safety_checker: true,
+      output_format: "png",
     },
     logs: false,
   });
   const url = result.data?.images?.[0]?.url;
-  if (!url) {
-    console.error(`no image url for ${v.key}`, JSON.stringify(result, null, 2));
-    process.exit(1);
-  }
-  const r = await fetch(url);
-  const buf = Buffer.from(await r.arrayBuffer());
-  const out = path.join(OUT_DIR, `tom-${v.key}.jpg`);
-  await writeFile(out, buf);
-  console.log(`  → ${out} (${(buf.length / 1024).toFixed(1)} KB)`);
+  if (!url) throw new Error("gpt-image-2/edit: no url\n" + JSON.stringify(result, null, 2));
+  return url;
 }
 
-console.log("done.");
+async function downloadTo(url, file) {
+  const r = await fetch(url);
+  const buf = Buffer.from(await r.arrayBuffer());
+  await writeFile(file, buf);
+  return buf.length;
+}
+
+async function uploadLocal(file) {
+  const buf = await readFile(file);
+  const blob = new Blob([buf], { type: "image/jpeg" });
+  return await fal.storage.upload(blob);
+}
+
+await mkdir(OUT_DIR, { recursive: true });
+
+const prompts = await loadPrompts();
+console.log(`✓ loaded prompts from ${PROMPT_FILE}`);
+
+console.log(`→ uploading ${WARM_PATH} as edit reference…`);
+const refUrl = await uploadLocal(WARM_PATH);
+console.log(`  ref: ${refUrl}`);
+
+const mode = process.argv[2] ?? "verify";
+const variantsToGenerate = mode === "all"
+  ? ["guarded", "cracking", "broken"]
+  : ["broken"];
+
+// Variants are independent (all use the same WARM ref) — fan out in parallel.
+const t0 = Date.now();
+console.log(`→ generating ${variantsToGenerate.length} variant(s) in parallel via gpt-image-2/edit (quality=high)…`);
+
+await Promise.all(variantsToGenerate.map(async key => {
+  const fullPrompt = buildEditPrompt(prompts[key], prompts.preserve);
+  const url = await gptImage2Edit(fullPrompt, refUrl);
+  const out = path.join(OUT_DIR, `tom-${key}.jpg`);
+  const bytes = await downloadTo(url, out);
+  console.log(`  ✓ ${out} (${(bytes / 1024).toFixed(1)} KB)`);
+}));
+
+console.log(`  total: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+
+console.log(`done. mode=${mode}`);

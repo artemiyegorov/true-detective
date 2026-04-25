@@ -49,6 +49,13 @@ export function cleanForDisplay(voiceText: string): string {
   return voiceText.replace(/\[[^\]]+\]/g, "").trim();
 }
 
+export function stripTagsForTts(voiceText: string): string {
+  return voiceText
+    .replace(/\[[^\]]+\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function generateVoice(params: {
   voiceText: string;
   voiceId: string;
@@ -58,6 +65,7 @@ export async function generateVoice(params: {
   if (!apiKey) throw new Error("Missing ELEVENLABS_API_KEY");
 
   const settings = voiceSettingsFor(params.mood);
+  const text = stripTagsForTts(params.voiceText);
 
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${params.voiceId}`,
@@ -69,7 +77,7 @@ export async function generateVoice(params: {
         Accept: "audio/mpeg",
       },
       body: JSON.stringify({
-        text: params.voiceText,
+        text,
         model_id: "eleven_turbo_v2_5",
         voice_settings: settings,
       }),
