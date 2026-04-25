@@ -46,20 +46,17 @@ export default function CasebookView({
 
   const rows = useMemo<ClueRow[]>(() => {
     if (!state) return [];
+    // Casebook holds evidence only — facts stay as ambient context, they
+    // don't get filed as clues.
     const evs: ClueRow[] = state.discoveredEvidence
       .map(id => evidenceById[id])
       .filter((d): d is ClueDetail => !!d)
       .map(detail => ({ kind: "evidence" as const, id: detail.id, detail }));
-    const facts: ClueRow[] = state.discoveredFacts
-      .map(id => ({ id, text: factsById[id] }))
-      .filter(f => f.text)
-      .map(f => ({ kind: "fact" as const, id: f.id, text: f.text }));
-    const all = [...evs, ...facts];
     if (filter === "important") {
-      return all.filter(r => state.importantClues.includes(r.id));
+      return evs.filter(r => state.importantClues.includes(r.id));
     }
-    return all;
-  }, [state, evidenceById, factsById, filter]);
+    return evs;
+  }, [state, evidenceById, filter]);
 
   if (!state) {
     return (
@@ -71,15 +68,15 @@ export default function CasebookView({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="px-6 py-3 flex items-center justify-between border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 hover:text-neutral-300">
-            ←
-          </Link>
-          <h1 className="font-fell text-2xl text-neutral-100 leading-none">{caseTitle}</h1>
-          <div className="ml-2"><Tabs /></div>
-        </div>
-        <div className="flex items-center gap-3 text-xs font-elite text-neutral-500">
+      <header className="px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
+        <Link
+          href="/"
+          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-400 hover:text-neutral-100"
+        >
+          home
+        </Link>
+        <div className="flex justify-center"><Tabs /></div>
+        <div className="flex items-center justify-end gap-3 text-xs font-elite text-neutral-500">
           <button
             onClick={() => setFilter("all")}
             className={`uppercase tracking-[0.2em] px-2 py-1.5 rounded ${filter === "all" ? "bg-neutral-100 text-neutral-900" : "hover:text-neutral-200"}`}
@@ -139,31 +136,22 @@ function CasebookRowItem({
   isPinned: boolean;
   onOpen: () => void;
 }) {
-  const isEvidence = row.kind === "evidence";
+  if (row.kind !== "evidence") return null;
   return (
     <li>
       <button
         onClick={onOpen}
         className="w-full text-left rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-700 px-4 py-3 transition flex gap-3"
       >
-        <span className={`shrink-0 w-1 self-stretch rounded ${isEvidence ? "bg-rose-700" : "bg-amber-600"}`} />
+        <span className="shrink-0 w-1 self-stretch rounded bg-rose-700" />
         <div className="flex-1 min-w-0">
-          <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-neutral-500">
-            {isEvidence ? "Evidence" : "Fact"}
-          </p>
-          {isEvidence ? (
-            <>
-              <p className="font-fell text-base text-neutral-100 mt-0.5">{row.detail.name}</p>
-              {row.detail.significance && (
-                <p className="text-sm text-neutral-400 italic mt-0.5 line-clamp-1">{row.detail.significance}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-base text-neutral-100 mt-0.5">{row.text}</p>
+          <p className="font-fell text-base text-neutral-100">{row.detail.name}</p>
+          {row.detail.significance && (
+            <p className="text-sm text-neutral-400 italic mt-0.5 line-clamp-1">{row.detail.significance}</p>
           )}
         </div>
         {isPinned && (
-          <span className="shrink-0 self-start font-elite text-[9px] uppercase tracking-wider text-rose-300">★ pinned</span>
+          <span className="shrink-0 self-start font-elite text-[9px] uppercase tracking-wider text-rose-300">★</span>
         )}
       </button>
     </li>
@@ -237,10 +225,7 @@ function ClueModal({
         transition={{ delay: 0.1 }}
       >
         <div>
-          <p className={`font-elite text-[10px] uppercase tracking-[0.3em] ${isEvidence ? "text-rose-300" : "text-amber-300"}`}>
-            {isEvidence ? "Evidence" : "Fact"}
-          </p>
-          <h2 className="font-fell text-3xl sm:text-4xl text-neutral-50 mt-2 leading-tight">
+          <h2 className="font-fell text-3xl sm:text-4xl text-neutral-50 leading-tight">
             {isEvidence ? detail?.name : row.text}
           </h2>
         </div>

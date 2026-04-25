@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -14,6 +14,9 @@ import {
   visitLocation,
   type PlayerState,
 } from "@/lib/player-state";
+import { BOARD_EDGES, BOARD_NODES, visibleNodes, type BoardNode } from "@/lib/board-graph";
+import { sceneFor } from "@/lib/scene-content";
+import Tabs from "../../Tabs";
 
 type Hotspot = {
   id: string;
@@ -28,8 +31,6 @@ type Hotspot = {
 type RevealedItem =
   | { kind: "evidence"; id: string; name: string; significance: string }
   | { kind: "fact"; id: string; text: string }
-  | { kind: "lead-npc"; id: string; npcId: string }
-  | { kind: "lead-location"; id: string; locId: string }
   | { kind: "info"; id: string; text: string };
 
 export default function LocationView({
@@ -45,13 +46,15 @@ export default function LocationView({
   locName: string;
   locImage: string | null;
   hotspots: Hotspot[];
-  evidenceMap: Record<string, { id: string; name: string; significance: string }>;
+  evidenceMap: Record<string, { id: string; name: string; significance: string; found_at?: string }>;
   factsMap: Record<string, string>;
   briefing: { narrator_script: string; key_facts: string[]; your_task: string } | null;
 }) {
   const [state, setState] = useState<PlayerState | null>(null);
   const [reveal, setReveal] = useState<RevealedItem | null>(null);
   const [showBriefing, setShowBriefing] = useState(false);
+
+  const sceneContent = useMemo(() => sceneFor(locId), [locId]);
 
   useEffect(() => {
     setState(getState());
@@ -60,6 +63,7 @@ export default function LocationView({
     return () => window.removeEventListener("td-state-change", handler);
   }, []);
 
+  // Visit + briefing + ambient-fact auto-discovery on entry.
   useEffect(() => {
     visitLocation(locId);
     if (briefing && !hasFlag("seen-briefing")) {
@@ -69,6 +73,9 @@ export default function LocationView({
   }, [locId, briefing]);
 
   function clickHotspot(hs: Hotspot) {
+    if (hs.leads_to_npc) return;       // person cards handle their own click
+    if (hs.leads_to_location) return;  // location cards handle their own click
+
     if (hs.reveals?.type === "evidence") {
       const ev = evidenceMap[hs.reveals.id];
       if (ev) {
@@ -85,27 +92,53 @@ export default function LocationView({
         return;
       }
     }
-    if (hs.leads_to_npc) {
-      setReveal({ kind: "lead-npc", id: hs.id, npcId: hs.leads_to_npc.replace("char_", "") });
-      return;
-    }
-    if (hs.leads_to_location) {
-      setReveal({ kind: "lead-location", id: hs.id, locId: hs.leads_to_location });
-      return;
-    }
     setReveal({ kind: "info", id: hs.id, text: hs.on_click_text ?? "Nothing of note here." });
   }
 
   if (!state) return <div className="p-8 text-neutral-500 text-sm">loading…</div>;
 
-  // Group hotspots by interaction kind so the page reads as a place,
-  // not a flat list of widgets.
+  // Group hotspots by interaction kind, but the player only sees a single
+  // bare list (no tag pills) — the grouping just shapes layout sections.
   const peopleHotspots = hotspots.filter(h => h.leads_to_npc);
-  const investigateHotspots = hotspots.filter(h => h.reveals);
   const exitHotspots = hotspots.filter(h => h.leads_to_location);
-  const lookHotspots = hotspots.filter(
-    h => !h.leads_to_npc && !h.reveals && !h.leads_to_location,
+  const objectHotspots = hotspots.filter(h => !h.leads_to_npc && !h.leads_to_location);
+
+  // Person nodes from the global graph, looked up by char_id so we can
+  // render their photo cards.
+  const hotspotPeople = peopleHotspots
+    .map(h => BOARD_NODES.find(n => n.kind === "person" && `char_${n.refId}` === h.leads_to_npc))
+    .filter((n): n is BoardNode => !!n);
+  const locationNodes = exitHotspots
+    .map(h => BOARD_NODES.find(n => n.kind === "location" && n.refId === h.leads_to_location))
+    .filter((n): n is BoardNode => !!n);
+
+  // Anyone the player has unlocked who is connected to this location
+  // through the case graph (so e.g. visiting the bakery surfaces Tom +
+  // Sarah even before they're listed as a hotspot).
+  const visible = visibleNodes(state);
+  const visibleIds = new Set(visible.map(n => n.id));
+  const locNodeId = `l:${locId.replace(/^loc_/, "")}`;
+  const linkedPeopleIds = new Set<string>();
+  for (const e of BOARD_EDGES) {
+    if (e.from === locNodeId && visibleIds.has(e.to)) linkedPeopleIds.add(e.to);
+    if (e.to === locNodeId && visibleIds.has(e.from)) linkedPeopleIds.add(e.from);
+  }
+  const linkedPeople = visible.filter(
+    n => n.kind === "person" && linkedPeopleIds.has(n.id),
   );
+  // Only persons with a chat target (i.e. not the victim).
+  const peopleNodes = mergeUniqueById([...hotspotPeople, ...linkedPeople])
+    .filter(p => !!p.href);
+
+  // Clues the player has discovered at this location.
+  const cluesHere = state.discoveredEvidence
+    .map(id => evidenceMap[id])
+    .filter((ev): ev is { id: string; name: string; significance: string; found_at?: string } => !!ev)
+    .filter(ev => ev.found_at?.split(":")[0] === locId);
+
+  const labelFor = (hs: Hotspot) => sceneContent?.labels?.[hs.id] ?? hs.label;
+  const ambient = sceneContent?.ambient ?? [];
+  const sceneProse = sceneContent?.scene ?? null;
 
   return (
     <div className="min-h-screen bg-neutral-950">
@@ -117,15 +150,21 @@ export default function LocationView({
         ) : (
           <div className="absolute inset-0 bg-[#0a0c12]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-950" />
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 to-transparent" />
-        <div className="absolute top-0 left-0 right-0 px-6 py-4 flex justify-between items-start">
-          <Link href="/board" className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-300 hover:text-white">
+        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-black/40" />
+        <div className="absolute top-0 left-0 right-0 px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center">
+          <Link
+            href="/"
+            className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-300 hover:text-white"
+          >
+            home
+          </Link>
+          <div className="flex justify-center"><Tabs /></div>
+          <Link
+            href="/board"
+            className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-300 hover:text-white"
+          >
             ← board
           </Link>
-          <div className="font-elite text-xs uppercase tracking-[0.2em] text-neutral-300 text-right">
-            {state.discoveredEvidence.length} evidence · {state.discoveredFacts.length} facts
-          </div>
         </div>
         <div className="absolute bottom-4 left-6 right-6">
           <p className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-400">Location</p>
@@ -133,50 +172,98 @@ export default function LocationView({
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-6">
-        {peopleHotspots.length > 0 && (
-          <Section title="People here" subtitle="Knock, ring, ask a question.">
-            {peopleHotspots.map(hs => (
-              <HotspotButton key={hs.id} hotspot={hs} state={state} onClick={() => clickHotspot(hs)} />
-            ))}
+      <div className="max-w-2xl mx-auto px-6 py-6 space-y-8">
+        {/* Atmospheric scene prose */}
+        {sceneProse && (
+          <p className="text-base sm:text-lg leading-relaxed text-neutral-200 italic">
+            {sceneProse}
+          </p>
+        )}
+
+        {/* Ambient facts — what you notice immediately */}
+        {ambient.length > 0 && (
+          <div className="space-y-2 border-l-2 border-neutral-800 pl-4">
+            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500">
+              You notice immediately
+            </p>
+            <ul className="space-y-1">
+              {ambient.map((line, i) => (
+                <li key={i} className="text-sm text-neutral-300 flex gap-2">
+                  <span className="text-neutral-600">·</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* People connected to / in the scene */}
+        {peopleNodes.length > 0 && (
+          <Section title="People connected here">
+            <div className="flex flex-wrap gap-3">
+              {peopleNodes.map(p => <PersonCard key={p.id} node={p} />)}
+            </div>
           </Section>
         )}
 
-        {investigateHotspots.length > 0 && (
-          <Section title="Investigate" subtitle="Take a closer look.">
-            {investigateHotspots.map(hs => (
-              <HotspotButton key={hs.id} hotspot={hs} state={state} onClick={() => clickHotspot(hs)} />
-            ))}
+        {/* Clues already discovered at this location */}
+        {cluesHere.length > 0 && (
+          <Section title="Clues from this location">
+            <ul className="space-y-1">
+              {cluesHere.map(ev => (
+                <li key={ev.id}>
+                  <ObjectButton
+                    label={ev.name}
+                    discovered={true}
+                    onClick={() => setReveal({ kind: "evidence", id: ev.id, name: ev.name, significance: ev.significance })}
+                  />
+                </li>
+              ))}
+            </ul>
           </Section>
         )}
 
-        {lookHotspots.length > 0 && (
-          <Section title="Look around" subtitle="Background detail.">
-            {lookHotspots.map(hs => (
-              <HotspotButton key={hs.id} hotspot={hs} state={state} onClick={() => clickHotspot(hs)} />
-            ))}
+        {/* Interactive objects as proper buttons (no leaked tags) */}
+        {objectHotspots.length > 0 && (
+          <Section title="Around you">
+            <div className="grid sm:grid-cols-2 gap-2">
+              {objectHotspots.map(hs => (
+                <ObjectButton
+                  key={hs.id}
+                  label={labelFor(hs)}
+                  discovered={
+                    (hs.reveals?.type === "evidence" && state.discoveredEvidence.includes(hs.reveals.id)) ||
+                    (hs.reveals?.type === "fact" && state.discoveredFacts.includes(hs.reveals.id))
+                  }
+                  onClick={() => clickHotspot(hs)}
+                />
+              ))}
+            </div>
           </Section>
         )}
 
-        {exitHotspots.length > 0 && (
-          <Section title="Move to" subtitle="Adjacent areas.">
-            {exitHotspots.map(hs => (
-              <HotspotButton key={hs.id} hotspot={hs} state={state} onClick={() => clickHotspot(hs)} />
-            ))}
+        {/* Connected locations */}
+        {locationNodes.length > 0 && (
+          <Section title="Adjacent">
+            <div className="flex flex-wrap gap-3">
+              {locationNodes.map(l => <LocationCard key={l.id} node={l} />)}
+            </div>
           </Section>
         )}
       </div>
 
-      {reveal && (
-        <RevealModal
-          reveal={reveal}
-          isPinned={
-            (reveal.kind === "evidence" && state.importantClues.includes(reveal.id)) ||
-            (reveal.kind === "fact" && state.importantClues.includes(reveal.id))
-          }
-          onClose={() => setReveal(null)}
-        />
-      )}
+      <AnimatePresence>
+        {reveal && (
+          <RevealModal
+            reveal={reveal}
+            isPinned={
+              (reveal.kind === "evidence" || reveal.kind === "fact") &&
+              state.importantClues.includes(reveal.id)
+            }
+            onClose={() => setReveal(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showBriefing && briefing && (
@@ -187,60 +274,96 @@ export default function LocationView({
   );
 }
 
-function Section({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+function mergeUniqueById<T extends { id: string }>(arr: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of arr) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-400">{title}</h2>
-        {subtitle && <p className="font-fell italic text-xs text-neutral-600">{subtitle}</p>}
-      </div>
-      <div className="grid sm:grid-cols-2 gap-2">{children}</div>
+      <h2 className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-3">
+        {title}
+      </h2>
+      {children}
     </section>
   );
 }
 
-function HotspotButton({
-  hotspot,
-  state,
+function ObjectButton({
+  label,
+  discovered,
   onClick,
 }: {
-  hotspot: Hotspot;
-  state: PlayerState;
+  label: string;
+  discovered: boolean;
   onClick: () => void;
 }) {
-  const alreadyDiscovered =
-    (hotspot.reveals?.type === "evidence" && state.discoveredEvidence.includes(hotspot.reveals.id)) ||
-    (hotspot.reveals?.type === "fact" && state.discoveredFacts.includes(hotspot.reveals.id));
-  const tag = hotspot.leads_to_npc
-    ? "NPC"
-    : hotspot.leads_to_location
-    ? "MOVE"
-    : hotspot.reveals?.type === "evidence"
-    ? "EVIDENCE"
-    : hotspot.reveals?.type === "fact"
-    ? "FACT"
-    : "LOOK";
   return (
     <button
       onClick={onClick}
-      className="text-left rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-700 px-3 py-2 transition"
+      className={`w-full text-left px-4 py-3 rounded-md ring-1 transition flex items-center gap-3 ${
+        discovered
+          ? "bg-[#0f1018] ring-neutral-900 text-neutral-500 hover:ring-neutral-700"
+          : "bg-[#15161f] ring-neutral-800 text-neutral-100 hover:bg-[#1a1c25] hover:ring-neutral-700"
+      }`}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-fell text-sm text-neutral-100">{hotspot.label}</span>
-        <span className="font-elite text-[9px] uppercase tracking-[0.3em] text-neutral-500">{tag}</span>
-      </div>
-      {alreadyDiscovered && (
-        <p className="font-elite text-[10px] uppercase tracking-wider text-emerald-500 mt-1">✓ noted</p>
+      <span className="text-base flex-1">{label}</span>
+      {discovered && (
+        <span className="font-elite text-[9px] uppercase tracking-wider text-emerald-600/80">noted</span>
       )}
     </button>
+  );
+}
+
+function PersonCard({ node }: { node: BoardNode }) {
+  return (
+    <Link
+      href={node.href ?? "#"}
+      className="flex items-center gap-3 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition min-w-[180px]"
+    >
+      {node.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={node.image} alt={node.label} className="w-10 h-12 object-cover rounded-sm" />
+      ) : (
+        <span className="w-10 h-12 rounded-sm bg-neutral-800 flex items-center justify-center font-elite text-xs text-neutral-500">
+          {(node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
+        </span>
+      )}
+      <div>
+        <p className="font-fell text-sm text-neutral-100 leading-tight">{node.label}</p>
+        <p className="font-elite text-[9px] uppercase tracking-wider text-neutral-500 mt-0.5">talk →</p>
+      </div>
+    </Link>
+  );
+}
+
+function LocationCard({ node }: { node: BoardNode }) {
+  return (
+    <Link
+      href={node.href ?? "#"}
+      className="flex items-center gap-3 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition min-w-[180px]"
+    >
+      {node.image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={node.image} alt={node.label} className="w-12 h-12 object-cover rounded-sm" />
+      ) : (
+        <span className="w-12 h-12 rounded-sm bg-amber-950/40 ring-1 ring-amber-700/40 flex items-center justify-center text-amber-300">
+          📍
+        </span>
+      )}
+      <div>
+        <p className="font-fell text-sm text-neutral-100 leading-tight">{node.label}</p>
+        <p className="font-elite text-[9px] uppercase tracking-wider text-neutral-500 mt-0.5">enter →</p>
+      </div>
+    </Link>
   );
 }
 
@@ -258,7 +381,7 @@ function RevealModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <motion.div
@@ -269,53 +392,35 @@ function RevealModal({
       >
         {reveal.kind === "evidence" && (
           <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-rose-300">Evidence</p>
+            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-rose-300">
+              Evidence · added to casebook
+            </p>
             <h2 className="font-fell text-xl text-neutral-100">{reveal.name}</h2>
-            <p className="font-fell text-sm text-neutral-300">{reveal.significance}</p>
+            <p className="text-sm text-neutral-300">{reveal.significance}</p>
             <PinRow id={reveal.id} isPinned={isPinned} />
           </>
         )}
         {reveal.kind === "fact" && (
           <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-amber-300">Fact noted</p>
-            <p className="font-fell text-base text-neutral-100">{reveal.text}</p>
-            <PinRow id={reveal.id} isPinned={isPinned} />
-          </>
-        )}
-        {reveal.kind === "lead-npc" && (
-          <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-blue-300">Person</p>
-            <p className="text-base text-neutral-200">Open the conversation.</p>
-            <Link
-              href={`/chat/${reveal.npcId}`}
-              className="inline-block mt-2 font-elite text-xs uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-3 py-1.5 hover:bg-white"
-              onClick={onClose}
-            >
-              Open chat →
-            </Link>
-          </>
-        )}
-        {reveal.kind === "lead-location" && (
-          <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-blue-300">Move</p>
-            <p className="text-base text-neutral-200">Step into the next area.</p>
-            <Link
-              href={`/location/${reveal.locId}`}
-              className="inline-block mt-2 font-elite text-xs uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-3 py-1.5 hover:bg-white"
-              onClick={onClose}
-            >
-              Go there →
-            </Link>
+            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-amber-300">
+              You note
+            </p>
+            <p className="text-base text-neutral-100">{reveal.text}</p>
           </>
         )}
         {reveal.kind === "info" && (
           <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500">Observation</p>
-            <p className="font-fell text-base text-neutral-200">{reveal.text}</p>
+            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500">
+              Observation
+            </p>
+            <p className="text-base text-neutral-200">{reveal.text}</p>
           </>
         )}
         <div className="pt-2 flex justify-end">
-          <button onClick={onClose} className="font-elite text-[10px] uppercase tracking-wider text-neutral-500 hover:text-neutral-300">
+          <button
+            onClick={onClose}
+            className="font-elite text-[10px] uppercase tracking-wider text-neutral-500 hover:text-neutral-300"
+          >
             close
           </button>
         </div>
@@ -366,20 +471,20 @@ function BriefingModal({
         <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-amber-300">
           The duty officer briefs you
         </p>
-        <p className="font-fell text-base text-neutral-200 leading-relaxed">
+        <p className="text-base text-neutral-200 leading-relaxed">
           {briefing.narrator_script}
         </p>
         <div>
           <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-2">
             Key facts
           </p>
-          <ul className="font-fell text-sm text-neutral-300 space-y-1 list-['—_'] pl-4">
+          <ul className="text-sm text-neutral-300 space-y-1 list-['—_'] pl-4">
             {briefing.key_facts.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
           </ul>
         </div>
-        <p className="font-fell italic text-sm text-neutral-400 border-l-2 border-amber-700/40 pl-3">
+        <p className="italic text-sm text-neutral-400 border-l-2 border-amber-700/40 pl-3">
           {briefing.your_task}
         </p>
         <div className="pt-2 flex justify-end">

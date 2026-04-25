@@ -68,30 +68,24 @@ export default function BoardView({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-3 flex items-center justify-between border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 hover:text-neutral-300">
-            ←
-          </Link>
-          <h1 className="font-fell text-2xl text-neutral-100 leading-none">
-            {caseTitle}
-          </h1>
-          <div className="ml-2"><Tabs /></div>
-        </div>
-        <div className="text-right text-xs font-elite text-neutral-500 flex items-center gap-3">
-          <div className="hidden sm:block">
-            <p>{data.nodes.length} pinned · {state.discoveredEvidence.length} clues</p>
-            <p className="text-[10px] mt-0.5">{state.unlockedLocations.length}/5 locations</p>
-          </div>
+      {/* Header — home left, tabs center, reset + important right */}
+      <header className="px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
+        <Link
+          href="/"
+          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-400 hover:text-neutral-100"
+        >
+          home
+        </Link>
+        <div className="flex justify-center"><Tabs /></div>
+        <div className="flex items-center justify-end gap-3">
           <button
             onClick={() => {
               if (confirm("Reset all card positions to default?")) resetBoardLayout();
             }}
-            className="font-elite text-[10px] uppercase tracking-[0.2em] text-neutral-600 hover:text-neutral-300 px-2 py-1.5"
+            className="font-elite text-[10px] uppercase tracking-[0.2em] text-neutral-500 hover:text-neutral-200 px-2 py-1.5"
             title="Reset card positions"
           >
-            reset layout
+            reset
           </button>
           <button
             onClick={() => setShowImportant(true)}
@@ -483,11 +477,16 @@ function DossierPanel({
         ×
       </button>
 
-      {/* Hero image (people / locations with image) */}
+      {/* Hero image (people / locations with image).
+          object-top so the head doesn't get cut off — bottom can clip. */}
       {heroImage ? (
         <div className="relative w-full h-[50vh] sm:h-[60vh] noir-vignette">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroImage} alt={node.label} className="w-full h-full object-cover" />
+          <img
+            src={heroImage}
+            alt={node.label}
+            className={`w-full h-full ${node.kind === "person" ? "object-top object-cover" : "object-cover"}`}
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black" />
         </div>
       ) : node.kind === "person" ? (
@@ -720,7 +719,7 @@ function ImportantPanel({
             {items.map(item => (
               <li key={item.id} className="rounded-md ring-1 ring-rose-900/50 p-3 bg-[#15161f]">
                 <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-rose-300">
-                  {item.kind === "evidence" ? "Evidence" : "Fact"}
+                  Pinned
                 </p>
                 {item.kind === "evidence" ? (
                   <>

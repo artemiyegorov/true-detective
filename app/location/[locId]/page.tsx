@@ -29,8 +29,10 @@ export default async function LocationPage({ params }: { params: { locId: string
     leads_to_npc: h.leads_to_npc,
   }));
 
-  const evidenceMap: Record<string, Pick<Evidence, "id" | "name" | "significance">> = {};
-  for (const e of ground.evidence) evidenceMap[e.id] = { id: e.id, name: e.name, significance: e.significance };
+  const evidenceMap: Record<string, Pick<Evidence, "id" | "name" | "significance" | "found_at">> = {};
+  for (const e of ground.evidence) {
+    evidenceMap[e.id] = { id: e.id, name: e.name, significance: e.significance, found_at: e.found_at };
+  }
 
   const factsMap: Record<string, string> = {};
   for (const f of ground.facts) factsMap[f.id] = f.text;
