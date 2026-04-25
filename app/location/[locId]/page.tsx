@@ -43,11 +43,17 @@ export default async function LocationPage({ params }: { params: { locId: string
     your_task: ground.briefing.your_task,
   } : null;
 
+  // Hand-curated location photos. Add new entries as art is delivered.
+  const LOC_IMAGE: Record<string, string> = {
+    loc_bakery_main: "/bakery.png",
+  };
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <LocationView
         locId={loc.id as string}
         locName={loc.name as string}
+        locImage={LOC_IMAGE[loc.id as string] ?? null}
         hotspots={hotspots}
         evidenceMap={evidenceMap}
         factsMap={factsMap}

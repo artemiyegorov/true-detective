@@ -1,8 +1,9 @@
 import { loadCase } from "@/lib/case";
-import BoardView, { type ClueDetail } from "./BoardView";
+import CasebookView, { type ClueDetail } from "./CasebookView";
 
-export default async function BoardPage() {
+export default async function CasebookPage() {
   const ground = await loadCase();
+
   const evidenceById: Record<string, ClueDetail> = {};
   for (const e of ground.evidence) {
     evidenceById[e.id] = {
@@ -15,9 +16,10 @@ export default async function BoardPage() {
   }
   const factsById: Record<string, string> = {};
   for (const f of ground.facts) factsById[f.id] = f.text;
+
   return (
-    <main className="min-h-screen noir-vignette">
-      <BoardView
+    <main className="min-h-screen bg-[#07080d]">
+      <CasebookView
         evidenceById={evidenceById}
         factsById={factsById}
         caseTitle={ground.meta.title}

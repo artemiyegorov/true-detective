@@ -5,8 +5,11 @@ export type Evidence = {
   id: string;
   name: string;
   discovery: string;
+  /** "loc_id:hotspot_id" or "loc_id" */
   found_at?: string;
   significance: string;
+  /** optional path to a clue image asset */
+  image?: string;
 };
 
 export type GroundTruth = {

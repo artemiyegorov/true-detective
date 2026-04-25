@@ -18,6 +18,8 @@ export type PlayerState = {
   importantClues: string[];
   /** facts that NPCs revealed during interviews, keyed by npc id */
   revealedByNpc: Record<string, string[]>;
+  /** custom card positions on the board, in % of canvas (0..100) */
+  boardLayout: Record<string, { x: number; y: number; rot?: number }>;
 };
 
 const DEFAULT_STATE: PlayerState = {
@@ -31,6 +33,7 @@ const DEFAULT_STATE: PlayerState = {
   flags: [],
   importantClues: [],
   revealedByNpc: {},
+  boardLayout: {},
 };
 
 function read(): PlayerState {
@@ -110,6 +113,22 @@ export function pinImportant(evidenceId: string) {
 export function unpinImportant(evidenceId: string) {
   const s = read();
   write({ ...s, importantClues: s.importantClues.filter(id => id !== evidenceId) });
+}
+
+export function setNodePosition(nodeId: string, x: number, y: number, rot?: number) {
+  const s = read();
+  write({
+    ...s,
+    boardLayout: {
+      ...s.boardLayout,
+      [nodeId]: { x, y, ...(rot !== undefined ? { rot } : {}) },
+    },
+  });
+}
+
+export function resetBoardLayout() {
+  const s = read();
+  write({ ...s, boardLayout: {} });
 }
 
 export function recordNpcReveal(npcId: string, info: string[]) {

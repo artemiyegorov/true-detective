@@ -171,6 +171,7 @@ const locations: BoardNode[] = [
     x: 64, y: 86,
     refId: "loc_bakery_main",
     href: "/location/loc_bakery_main",
+    image: "/bakery.png",
     role: "Front of the shop · public area",
     visible: VISITED_BACKROOM,
     hint: "Front of the shop. Crime scene tape on the back door.",

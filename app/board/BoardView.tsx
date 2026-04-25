@@ -1,67 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   getState,
   pinImportant,
+  resetBoardLayout,
+  setNodePosition,
   unpinImportant,
   type PlayerState,
 } from "@/lib/player-state";
 import {
   BOARD_EDGES,
+  BOARD_NODES,
   visibleNodes,
   visibleEdges,
   type BoardNode,
 } from "@/lib/board-graph";
+import Tabs from "../Tabs";
 
-type ClueDetail = { id: string; name: string; significance: string };
-
-const KIND_STYLE: Record<BoardNode["kind"], {
-  ring: string;
-  text: string;
-  glow: string;
-  iconBg: string;
-  icon: string;
-  tag: string;
-  accent: string;
-}> = {
-  location: {
-    ring: "ring-amber-700/50",
-    text: "text-amber-200",
-    glow: "glow-amber",
-    iconBg: "bg-amber-900/40",
-    icon: "📍",
-    tag: "LOCATION",
-    accent: "text-amber-300",
-  },
-  person: {
-    ring: "ring-slate-500/50",
-    text: "text-slate-100",
-    glow: "glow-slate",
-    iconBg: "bg-slate-700/40",
-    icon: "👤",
-    tag: "PERSON",
-    accent: "text-slate-200",
-  },
-  clue: {
-    ring: "ring-rose-800/60",
-    text: "text-rose-100",
-    glow: "glow-rust",
-    iconBg: "bg-rose-900/40",
-    icon: "🔍",
-    tag: "CLUE",
-    accent: "text-rose-300",
-  },
+export type ClueDetail = {
+  id: string;
+  name: string;
+  significance: string;
+  foundAt?: string;
+  image?: string;
 };
 
 export default function BoardView({
   evidenceById,
+  factsById,
   caseTitle,
 }: {
   evidenceById: Record<string, ClueDetail>;
+  factsById: Record<string, string>;
   caseTitle: string;
 }) {
   const [state, setState] = useState<PlayerState | null>(null);
@@ -96,28 +69,35 @@ export default function BoardView({
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="px-6 py-4 flex items-baseline justify-between border-b border-neutral-800/80 bg-black/30 backdrop-blur">
-        <div>
-          <Link href="/" className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-500 hover:text-neutral-300">
-            ← case file
+      <header className="px-6 py-3 flex items-center justify-between border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
+        <div className="flex items-center gap-4">
+          <Link href="/" className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 hover:text-neutral-300">
+            ←
           </Link>
-          <h1 className="font-elite text-2xl tracking-wide mt-1 text-neutral-100">
+          <h1 className="font-fell text-2xl text-neutral-100 leading-none">
             {caseTitle}
           </h1>
+          <div className="ml-2"><Tabs /></div>
         </div>
-        <div className="text-right text-sm font-elite text-neutral-500 flex items-center gap-3">
-          <div>
-            <p>{data.nodes.length} pinned · {data.edges.length} threads</p>
-            <p className="text-xs mt-0.5">
-              {state.discoveredEvidence.length} clues · {state.unlockedLocations.length}/5 locations
-            </p>
+        <div className="text-right text-xs font-elite text-neutral-500 flex items-center gap-3">
+          <div className="hidden sm:block">
+            <p>{data.nodes.length} pinned · {state.discoveredEvidence.length} clues</p>
+            <p className="text-[10px] mt-0.5">{state.unlockedLocations.length}/5 locations</p>
           </div>
           <button
-            onClick={() => setShowImportant(true)}
-            className="ml-4 font-elite text-[10px] uppercase tracking-[0.2em] rounded ring-1 ring-rose-800/60 px-3 py-2 text-rose-200 hover:bg-rose-950/40"
-            title="Important evidence"
+            onClick={() => {
+              if (confirm("Reset all card positions to default?")) resetBoardLayout();
+            }}
+            className="font-elite text-[10px] uppercase tracking-[0.2em] text-neutral-600 hover:text-neutral-300 px-2 py-1.5"
+            title="Reset card positions"
           >
-            ★ {importantCount} important
+            reset layout
+          </button>
+          <button
+            onClick={() => setShowImportant(true)}
+            className="font-elite text-[10px] uppercase tracking-[0.2em] rounded ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40"
+          >
+            ★ {importantCount}
           </button>
         </div>
       </header>
@@ -148,6 +128,7 @@ export default function BoardView({
           <ImportantPanel
             state={state}
             evidenceById={evidenceById}
+            factsById={factsById}
             onClose={() => setShowImportant(false)}
           />
         )}
@@ -167,11 +148,26 @@ function BoardCanvas({
   state: PlayerState;
   onNodeClick: (n: BoardNode) => void;
 }) {
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Resolve final position for a node: layout override first, then graph default.
+  const resolvedPos = (n: BoardNode) => {
+    const layout = state.boardLayout[n.id];
+    return {
+      x: layout?.x ?? n.x,
+      y: layout?.y ?? n.y,
+      rot: layout?.rot ?? naturalRotation(n.id),
+    };
+  };
+
+  const positioned = nodes.map(n => ({ node: n, pos: resolvedPos(n) }));
 
   return (
-    <div className="absolute inset-0">
-      {/* SVG strings under cards */}
+    <div
+      ref={containerRef}
+      className="absolute inset-0 cork-board"
+    >
+      {/* SVG strings */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
         preserveAspectRatio="none"
@@ -179,7 +175,7 @@ function BoardCanvas({
       >
         <defs>
           <filter id="threadGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="0.25" result="blur"/>
+            <feGaussianBlur stdDeviation="0.2" result="blur"/>
             <feMerge>
               <feMergeNode in="blur"/>
               <feMergeNode in="SourceGraphic"/>
@@ -187,14 +183,14 @@ function BoardCanvas({
           </filter>
         </defs>
         {edges.map((e, i) => {
-          const a = nodeMap.get(e.from);
-          const b = nodeMap.get(e.to);
+          const a = positioned.find(p => p.node.id === e.from);
+          const b = positioned.find(p => p.node.id === e.to);
           if (!a || !b) return null;
           return (
             <motion.line
               key={`${e.from}->${e.to}-${i}`}
-              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-              stroke="var(--string-faint)"
+              x1={a.pos.x} y1={a.pos.y} x2={b.pos.x} y2={b.pos.y}
+              stroke="rgba(180, 60, 50, 0.55)"
               strokeWidth={0.18}
               strokeLinecap="round"
               filter="url(#threadGlow)"
@@ -207,13 +203,15 @@ function BoardCanvas({
         })}
       </svg>
 
+      {/* Cards layer */}
       <AnimatePresence>
-        {nodes.map(n => (
-          <NodeCard
-            key={n.id}
-            node={n}
-            state={state}
-            onClick={() => onNodeClick(n)}
+        {positioned.map(({ node, pos }) => (
+          <PinnedCard
+            key={node.id}
+            node={node}
+            pos={pos}
+            containerRef={containerRef}
+            onClick={() => onNodeClick(node)}
           />
         ))}
       </AnimatePresence>
@@ -221,83 +219,215 @@ function BoardCanvas({
   );
 }
 
-function NodeCard({
+// Stable per-node tilt so pinned cards look hand-placed, not aligned.
+function naturalRotation(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  // [-3°, +3°]
+  return ((h % 60) - 30) / 10;
+}
+
+// =====================================================================
+// Polaroid / index / sticky card — pinned to the cork
+// =====================================================================
+
+function PinnedCard({
   node,
-  state,
+  pos,
+  containerRef,
   onClick,
 }: {
   node: BoardNode;
-  state: PlayerState;
+  pos: { x: number; y: number; rot: number };
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onClick: () => void;
 }) {
-  const style = KIND_STYLE[node.kind];
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  const [dragging, setDragging] = useState(false);
 
-  // Visual state: visited locations / met persons / discovered clues get a
-  // subtle glow halo and a "✓" tick.
-  const visitedOrMet =
-    (node.kind === "location" && node.refId && state.visitedLocations.includes(node.refId)) ||
-    (node.kind === "person" && node.refId && state.metNpcs.includes(node.refId)) ||
-    node.kind === "clue";
-  const initials = (node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase();
+  function handleDragEnd(_: unknown, info: { offset: { x: number; y: number } }) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const dxPct = (info.offset.x / rect.width) * 100;
+    const dyPct = (info.offset.y / rect.height) * 100;
+    const newX = clamp(pos.x + dxPct, 4, 96);
+    const newY = clamp(pos.y + dyPct, 6, 94);
+    dragX.set(0);
+    dragY.set(0);
+    setNodePosition(node.id, newX, newY, pos.rot);
+    // Defer onClick suppression until after the click event would fire.
+    setTimeout(() => setDragging(false), 50);
+  }
+
+  // Click only when drag delta was tiny.
+  function handleClick(e: React.MouseEvent) {
+    if (dragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onClick();
+  }
 
   return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      title={node.hint ?? node.label}
-      className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer
-        rounded-md ring-1 ${style.ring} ${style.glow}
-        bg-[#15161f]/95 backdrop-blur-sm
-        px-2.5 py-1.5 min-w-[148px] max-w-[200px]
-        hover:scale-[1.04] transition-transform
-        text-left`}
-      style={{ left: `${node.x}%`, top: `${node.y}%` }}
+    <motion.div
+      drag
+      dragMomentum={false}
+      dragElastic={0}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={handleDragEnd}
+      onClick={handleClick}
+      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer select-none"
+      style={{
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        x: dragX,
+        y: dragY,
+        rotate: pos.rot,
+        zIndex: dragging ? 30 : 1,
+      }}
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.6 }}
+      whileHover={{ scale: 1.04, rotate: 0, zIndex: 20 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
     >
-      <div className="flex items-center gap-2">
-        {/* Avatar / icon */}
-        {node.kind === "person" ? (
-          node.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={node.image}
-              alt={node.label}
-              className="shrink-0 w-7 h-9 object-cover rounded-sm ring-1 ring-slate-600/60"
-            />
-          ) : (
-            <span className="shrink-0 inline-flex items-center justify-center w-7 h-9 rounded-sm bg-slate-700/40 text-[11px] font-elite text-slate-200 ring-1 ring-slate-600/40">
-              {initials}
-            </span>
-          )
+      {/* Push-pin */}
+      <span
+        className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full ${pinColor(node.kind)} shadow-[0_2px_3px_rgba(0,0,0,0.5)]`}
+        style={{ boxShadow: "inset 0 -1px 1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.7)" }}
+      />
+      <CardBody node={node} />
+    </motion.div>
+  );
+}
+
+function pinColor(kind: BoardNode["kind"]): string {
+  if (kind === "person") return "bg-slate-300";
+  if (kind === "location") return "bg-amber-300";
+  return "bg-rose-500"; // clue
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function CardBody({ node }: { node: BoardNode }) {
+  if (node.kind === "person") return <PolaroidCard node={node} />;
+  if (node.kind === "location") return <IndexCard node={node} />;
+  return <StickyCard node={node} />;
+}
+
+// Person — small polaroid (photo + name, no description).
+function PolaroidCard({ node }: { node: BoardNode }) {
+  const initials = (node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase();
+  return (
+    <div
+      className="bg-[#f3ede0] p-1.5 pb-2 ring-1 ring-black/30 w-[104px]"
+      style={{ boxShadow: "0 8px 18px -4px rgba(0,0,0,0.7), 0 2px 3px rgba(0,0,0,0.5)" }}
+    >
+      <div className="relative aspect-[3/4] bg-[#1f1d1a] overflow-hidden">
+        {node.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={node.image}
+            alt={node.label}
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
         ) : (
-          <span className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-sm text-[11px] ${style.iconBg}`}>
-            {style.icon}
-          </span>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
-            <span className={`font-elite text-[9px] uppercase tracking-[0.25em] ${style.text} opacity-70`}>
-              {style.tag}
-            </span>
-            {visitedOrMet && (
-              <span className="text-[10px] text-emerald-500/80">✓</span>
-            )}
+          <div className="w-full h-full flex items-center justify-center font-fell text-2xl text-[#f3ede0]/70">
+            {initials}
           </div>
-          <p className="font-fell text-[14px] leading-tight text-neutral-100 truncate">
-            {node.label}
-          </p>
-        </div>
+        )}
+        <div className="absolute inset-0 mix-blend-multiply opacity-40 pointer-events-none"
+             style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%)" }} />
       </div>
-    </motion.button>
+      <p className="font-fell text-[11px] text-center text-[#1a1a1a] mt-1.5 leading-tight truncate">
+        {node.label}
+      </p>
+    </div>
+  );
+}
+
+// Location — small polaroid of the place when there's an image, otherwise
+// a tiny index-card with just a label (no leaked prompt text).
+function IndexCard({ node }: { node: BoardNode }) {
+  if (node.image) {
+    return (
+      <div
+        className="bg-[#f3ede0] p-1.5 pb-2 ring-1 ring-black/30 w-[120px]"
+        style={{ boxShadow: "0 8px 18px -4px rgba(0,0,0,0.7), 0 2px 3px rgba(0,0,0,0.5)" }}
+      >
+        <div className="relative aspect-[4/5] bg-[#1f1d1a] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={node.image}
+            alt={node.label}
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+          <div className="absolute inset-0 mix-blend-multiply opacity-30 pointer-events-none"
+               style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%)" }} />
+        </div>
+        <p className="font-fell text-[11px] text-center text-[#1a1a1a] mt-1.5 leading-tight truncate">
+          {node.label}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative w-[120px] px-2.5 py-2 bg-[#fbf6e6] ring-1 ring-black/40"
+      style={{ boxShadow: "0 8px 18px -4px rgba(0,0,0,0.65), 0 2px 4px rgba(0,0,0,0.4)" }}
+    >
+      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-rose-700/70">
+        Location
+      </p>
+      <p className="font-fell text-[12px] text-[#1a1a1a] leading-tight mt-1 truncate">
+        {node.label}
+      </p>
+    </div>
+  );
+}
+
+// Clue — small torn paper note.
+function StickyCard({ node }: { node: BoardNode }) {
+  return (
+    <div
+      className="relative w-[110px] px-2 py-1.5 bg-[#f0d9b5] ring-1 ring-rose-900/30"
+      style={{
+        boxShadow: "0 6px 14px -2px rgba(0,0,0,0.55)",
+        clipPath: "polygon(0% 3px, 6px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%)",
+      }}
+    >
+      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-rose-800">
+        Clue
+      </p>
+      <p className="font-fell text-[11px] text-[#1a1a1a] leading-tight mt-0.5 truncate">
+        {node.label}
+      </p>
+    </div>
   );
 }
 
 // =====================================================================
-// Dossier — opens when you click a person or location card
+// Dossier panel + Important panel — same as before
 // =====================================================================
+
+const KIND_ACCENT: Record<BoardNode["kind"], string> = {
+  location: "text-amber-300",
+  person: "text-slate-200",
+  clue: "text-rose-300",
+};
+
+const KIND_TAG: Record<BoardNode["kind"], string> = {
+  location: "LOCATION",
+  person: "PERSON",
+  clue: "CLUE",
+};
 
 function DossierPanel({
   node,
@@ -310,19 +440,15 @@ function DossierPanel({
   evidenceById: Record<string, ClueDetail>;
   onClose: () => void;
 }) {
-  const style = KIND_STYLE[node.kind];
-
-  // Connected clues that have already been discovered.
-  const connectedClues =
-    node.kind === "clue"
-      ? []
-      : BOARD_EDGES.filter(e => (e.from === node.id || e.to === node.id))
-          .map(e => (e.from === node.id ? e.to : e.from))
-          .map(id => {
-            const n = visibleNodes(state).find(v => v.id === id);
-            return n;
-          })
-          .filter((n): n is BoardNode => !!n && n.kind === "clue");
+  // Walk the visible-graph edges to find related nodes by kind.
+  const allConnected = BOARD_EDGES
+    .filter(e => e.from === node.id || e.to === node.id)
+    .map(e => (e.from === node.id ? e.to : e.from))
+    .map(id => visibleNodes(state).find(v => v.id === id))
+    .filter((n): n is BoardNode => !!n);
+  const connectedClues = allConnected.filter(n => n.kind === "clue");
+  const connectedPeople = allConnected.filter(n => n.kind === "person");
+  const connectedLocations = allConnected.filter(n => n.kind === "location");
 
   const npcReveals = node.kind === "person" && node.refId
     ? state.revealedByNpc[node.refId] ?? []
@@ -332,106 +458,161 @@ function DossierPanel({
   const clueDetail = isClue && node.refId ? evidenceById[node.refId] : null;
   const isPinned = isClue && node.refId ? state.importantClues.includes(node.refId) : false;
 
+  // Hero image: clues use their image (if any) at the top; people use
+  // portrait; locations use location photo. Otherwise skip the hero.
+  const heroImage = node.image ?? clueDetail?.image ?? null;
+  const initials = (node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase();
+
+  // For clue: location where it was found (if visible on board).
+  const foundAtLoc = clueDetail?.foundAt
+    ? BOARD_NODES.find(n => n.kind === "location" && n.refId === clueDetail.foundAt)
+    : undefined;
+
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      onClick={onClose}
     >
-      <motion.div
-        className="relative bg-[#15161f] ring-1 ring-neutral-700 rounded-md w-full max-w-lg overflow-hidden"
-        initial={{ scale: 0.92, y: 12 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 12 }}
-        onClick={e => e.stopPropagation()}
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="fixed top-5 right-5 z-50 w-10 h-10 rounded-full bg-black/70 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-300 hover:text-white flex items-center justify-center text-lg leading-none"
       >
-        {/* Header strip with photo (if person) */}
+        ×
+      </button>
+
+      {/* Hero image (people / locations with image) */}
+      {heroImage ? (
+        <div className="relative w-full h-[50vh] sm:h-[60vh] noir-vignette">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroImage} alt={node.label} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black" />
+        </div>
+      ) : node.kind === "person" ? (
+        <div className="relative w-full h-[50vh] sm:h-[60vh] noir-vignette flex items-center justify-center bg-[#0a0a14]">
+          <span className="font-fell text-7xl text-slate-500">{initials}</span>
+        </div>
+      ) : null}
+
+      {/* Body */}
+      <motion.div
+        className={`max-w-2xl mx-auto px-6 py-8 space-y-6 relative ${
+          heroImage || node.kind === "person" ? "-mt-16" : "pt-24"
+        }`}
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div>
+          <p className={`font-elite text-[10px] uppercase tracking-[0.3em] ${KIND_ACCENT[node.kind]}`}>
+            {KIND_TAG[node.kind]}
+          </p>
+          <h2 className="font-fell text-4xl sm:text-5xl text-neutral-50 mt-2 leading-tight">
+            {node.label}
+          </h2>
+          {node.role && (
+            <p className="font-fell italic text-base text-neutral-400 mt-1">{node.role}</p>
+          )}
+        </div>
+
+        {isClue && clueDetail?.significance && (
+          <p className="text-base text-neutral-200 leading-relaxed">
+            {clueDetail.significance}
+          </p>
+        )}
+
         {node.kind === "person" && (
-          <div className="relative h-44 bg-[#0a0a14] overflow-hidden">
-            {node.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={node.image}
-                alt={node.label}
-                className="w-full h-full object-cover opacity-90"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center font-elite text-5xl text-slate-500">
-                {(node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
-              </div>
+          <DossierKnown
+            connectedClues={connectedClues}
+            npcReveals={npcReveals}
+            evidenceById={evidenceById}
+          />
+        )}
+
+        {isClue && (connectedPeople.length > 0 || connectedLocations.length > 0 || foundAtLoc) && (
+          <div className="space-y-4">
+            {connectedPeople.length > 0 && (
+              <RelatedRow title="Connected to" nodes={connectedPeople} onItem={onClose} />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#15161f] via-[#15161f]/30 to-transparent" />
+            {(foundAtLoc || connectedLocations.length > 0) && (
+              <RelatedRow
+                title="Found at"
+                nodes={foundAtLoc ? [foundAtLoc, ...connectedLocations.filter(l => l.id !== foundAtLoc.id)] : connectedLocations}
+                onItem={onClose}
+              />
+            )}
           </div>
         )}
 
-        <div className="p-5 space-y-4">
-          <div>
-            <p className={`font-elite text-[10px] uppercase tracking-[0.3em] ${style.accent}`}>
-              {style.tag}{node.refId ? ` · ${node.refId}` : ""}
-            </p>
-            <h2 className="font-fell text-2xl text-neutral-100 mt-1">{node.label}</h2>
-            {node.role && (
-              <p className="font-fell text-sm text-neutral-400 italic mt-0.5">{node.role}</p>
-            )}
-          </div>
-
-          {/* Clue significance */}
-          {isClue && clueDetail?.significance && (
-            <p className="font-fell text-sm text-neutral-200 leading-relaxed">
-              {clueDetail.significance}
-            </p>
-          )}
-
-          {/* Person hint */}
-          {!isClue && node.hint && (
-            <p className="font-fell text-sm text-neutral-300 leading-relaxed">{node.hint}</p>
-          )}
-
-          {/* What we know — only for people */}
-          {node.kind === "person" && (
-            <DossierKnown
-              connectedClues={connectedClues}
-              npcReveals={npcReveals}
-              evidenceById={evidenceById}
-            />
-          )}
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            {node.href && (
-              <Link
-                href={node.href}
-                className="font-elite text-[11px] uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-3 py-1.5 hover:bg-white"
-                onClick={onClose}
-              >
-                {node.kind === "person" ? "Open interview →" : "Visit location →"}
-              </Link>
-            )}
-            {isClue && node.refId && (
-              <button
-                onClick={() => {
-                  if (isPinned) unpinImportant(node.refId!);
-                  else pinImportant(node.refId!);
-                }}
-                className={`font-elite text-[11px] uppercase tracking-wider rounded px-3 py-1.5 ring-1 transition ${
-                  isPinned
-                    ? "bg-rose-900/50 ring-rose-700 text-rose-100"
-                    : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
-                }`}
-              >
-                {isPinned ? "★ pinned" : "☆ pin important"}
-              </button>
-            )}
-            <button
+        <div className="flex flex-wrap gap-2 pt-4">
+          {node.href && (
+            <Link
+              href={node.href}
+              className="font-elite text-[11px] uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-4 py-2 hover:bg-white"
               onClick={onClose}
-              className="ml-auto font-elite text-[11px] uppercase tracking-wider text-neutral-500 hover:text-neutral-300 px-2"
             >
-              close
+              {node.kind === "person" ? "Open interview →" : "Visit location →"}
+            </Link>
+          )}
+          {isClue && node.refId && (
+            <button
+              onClick={() => {
+                if (isPinned) unpinImportant(node.refId!);
+                else pinImportant(node.refId!);
+              }}
+              className={`font-elite text-[11px] uppercase tracking-wider rounded px-4 py-2 ring-1 transition ${
+                isPinned
+                  ? "bg-rose-900/50 ring-rose-700 text-rose-100"
+                  : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
+              }`}
+            >
+              {isPinned ? "★ pinned" : "☆ pin important"}
             </button>
-          </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function RelatedRow({
+  title,
+  nodes,
+  onItem,
+}: {
+  title: string;
+  nodes: BoardNode[];
+  onItem: () => void;
+}) {
+  if (!nodes.length) return null;
+  return (
+    <div>
+      <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-2">
+        {title}
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {nodes.map(n => (
+          <Link
+            key={n.id}
+            href={n.href ?? "#"}
+            onClick={onItem}
+            className="flex items-center gap-2 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition"
+          >
+            {n.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={n.image} alt={n.label} className="w-8 h-10 object-cover rounded-sm" />
+            ) : (
+              <span className="w-8 h-10 rounded-sm bg-neutral-800 flex items-center justify-center font-elite text-[10px] text-neutral-500">
+                {(n.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
+              </span>
+            )}
+            <span className="font-fell text-sm text-neutral-100">{n.label}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -451,12 +632,12 @@ function DossierKnown({
         What we know
       </p>
       {!hasContent && (
-        <p className="font-fell italic text-sm text-neutral-600">
+        <p className="italic text-sm text-neutral-600">
           Nothing yet. Talk to them or surface evidence.
         </p>
       )}
       {connectedClues.length > 0 && (
-        <ul className="font-fell text-sm text-neutral-300 space-y-1 mb-2">
+        <ul className="text-sm text-neutral-300 space-y-1 mb-2">
           {connectedClues.map(c => {
             const ev = c.refId ? evidenceById[c.refId] : null;
             return (
@@ -474,7 +655,7 @@ function DossierKnown({
         </ul>
       )}
       {npcReveals.length > 0 && (
-        <ul className="font-fell text-sm text-neutral-300 space-y-1">
+        <ul className="text-sm text-neutral-300 space-y-1">
           {npcReveals.map((r, i) => (
             <li key={i} className="flex gap-2">
               <span className="text-amber-400">·</span>
@@ -487,22 +668,31 @@ function DossierKnown({
   );
 }
 
-// =====================================================================
-// Important panel — sliding sidebar with pinned clues
-// =====================================================================
-
 function ImportantPanel({
   state,
   evidenceById,
+  factsById,
   onClose,
 }: {
   state: PlayerState;
   evidenceById: Record<string, ClueDetail>;
+  factsById: Record<string, string>;
   onClose: () => void;
 }) {
-  const items = state.importantClues
-    .map(id => evidenceById[id])
-    .filter((e): e is ClueDetail => !!e);
+  type Pinned =
+    | { id: string; kind: "evidence"; name: string; significance: string }
+    | { id: string; kind: "fact"; text: string };
+
+  const items: Pinned[] = state.importantClues
+    .map<Pinned | null>(id => {
+      const ev = evidenceById[id];
+      if (ev) return { id, kind: "evidence", name: ev.name, significance: ev.significance };
+      const fact = factsById[id];
+      if (fact) return { id, kind: "fact", text: fact };
+      return null;
+    })
+    .filter((p): p is Pinned => !!p);
+
   return (
     <motion.div
       className="fixed inset-0 z-40 bg-black/60 flex justify-end"
@@ -510,32 +700,40 @@ function ImportantPanel({
       onClick={onClose}
     >
       <motion.aside
-        className="h-full w-full max-w-sm bg-[#0d0e15] ring-l ring-1 ring-rose-900/40 p-5 overflow-y-auto"
+        className="h-full w-full max-w-sm bg-[#0d0e15] ring-1 ring-rose-900/40 p-5 overflow-y-auto"
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 280, damping: 32 }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="font-fell text-xl text-rose-100">Important evidence</h2>
+          <h2 className="font-fell text-xl text-rose-100">Important findings</h2>
           <button onClick={onClose} className="font-elite text-xs uppercase text-neutral-500 hover:text-neutral-300">
             close
           </button>
         </div>
         {items.length === 0 ? (
-          <p className="font-fell italic text-sm text-neutral-500">
-            Nothing pinned yet. Open a clue and tap “pin important”.
+          <p className="italic text-sm text-neutral-500">
+            Nothing pinned yet. Tap “pin important” on any evidence or fact.
           </p>
         ) : (
           <ul className="space-y-3">
-            {items.map(ev => (
-              <li key={ev.id} className="rounded-md ring-1 ring-rose-900/50 p-3 bg-[#15161f]">
-                <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-rose-300">{ev.id}</p>
-                <p className="font-fell text-base text-neutral-100 mt-0.5">{ev.name}</p>
-                {ev.significance && (
-                  <p className="font-fell text-sm text-neutral-400 italic mt-1">{ev.significance}</p>
+            {items.map(item => (
+              <li key={item.id} className="rounded-md ring-1 ring-rose-900/50 p-3 bg-[#15161f]">
+                <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-rose-300">
+                  {item.kind === "evidence" ? "Evidence" : "Fact"}
+                </p>
+                {item.kind === "evidence" ? (
+                  <>
+                    <p className="font-fell text-base text-neutral-100 mt-0.5">{item.name}</p>
+                    {item.significance && (
+                      <p className="text-sm text-neutral-400 italic mt-1">{item.significance}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-base text-neutral-100 mt-0.5">{item.text}</p>
                 )}
                 <button
-                  onClick={() => unpinImportant(ev.id)}
+                  onClick={() => unpinImportant(item.id)}
                   className="font-elite text-[10px] uppercase tracking-wider mt-2 text-neutral-500 hover:text-rose-300"
                 >
                   unpin
