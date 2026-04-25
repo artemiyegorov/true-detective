@@ -1,0 +1,281 @@
+import type { PlayerState } from "./player-state";
+
+export type NodeKind = "location" | "person" | "clue";
+
+export type BoardNode = {
+  id: string;
+  kind: NodeKind;
+  label: string;
+  /** percent of board area, 0..100 */
+  x: number;
+  y: number;
+  /** locked nodes are completely hidden until visible(state) returns true */
+  visible: (s: PlayerState) => boolean;
+  /** routing target on click; for clues we open a modal instead */
+  href?: string;
+  /** for clue nodes only — id of the evidence in case JSON */
+  evidenceId?: string;
+  /** short hover text */
+  hint?: string;
+};
+
+export type BoardEdge = {
+  from: string;
+  to: string;
+  label?: string;
+  /** edge appears once both endpoints are visible (default true) */
+};
+
+const ALWAYS = (_s: PlayerState) => true;
+
+const has = <T>(arr: T[], v: T) => arr.includes(v);
+
+// === People ===
+//
+// Initial roster present at the bakery on Monday morning per the ground
+// truth opening scene (Margaret + David + Tom + Martin). Sarah, Tyler,
+// Daniel, Kevin and Eleanor are gated by a discovery condition.
+
+const people: BoardNode[] = [
+  {
+    id: "p:margaret",
+    kind: "person",
+    label: "Margaret Cole",
+    x: 50, y: 35,
+    visible: ALWAYS,
+    hint: "Victim. 54. Bakery owner.",
+  },
+  {
+    id: "p:david",
+    kind: "person",
+    label: "David Cole",
+    x: 28, y: 22,
+    visible: ALWAYS,
+    href: "/chat/david",
+    hint: "Husband. Grieving at the scene.",
+  },
+  {
+    id: "p:tom",
+    kind: "person",
+    label: "Tom Brennan",
+    x: 72, y: 22,
+    visible: ALWAYS,
+    href: "/chat/tom",
+    hint: "Family friend. Brought coffee Monday morning.",
+  },
+  {
+    id: "p:martin",
+    kind: "person",
+    label: "Martin Reyes",
+    x: 50, y: 60,
+    visible: ALWAYS,
+    href: "/chat/martin",
+    hint: "Baker. Found the body, called 911.",
+  },
+  {
+    id: "p:sarah",
+    kind: "person",
+    label: "Sarah Kim",
+    x: 78, y: 50,
+    href: "/chat/sarah",
+    visible: s =>
+      has(s.metNpcs, "david") ||
+      has(s.metNpcs, "tom") ||
+      has(s.metNpcs, "martin") ||
+      has(s.discoveredEvidence, "ev_margaret_note"),
+    hint: "Business partner. Mentioned by David / Margaret's note.",
+  },
+  {
+    id: "p:tyler",
+    kind: "person",
+    label: "Tyler Cole",
+    x: 14, y: 35,
+    href: "/chat/tyler",
+    visible: s => has(s.metNpcs, "david") || has(s.unlockedLocations, "loc_cole_house"),
+    hint: "Son, 16. Was at a sleepover Sunday night.",
+  },
+  {
+    id: "p:daniel",
+    kind: "person",
+    label: "Daniel Kim",
+    x: 92, y: 62,
+    href: "/chat/daniel",
+    visible: s => has(s.metNpcs, "sarah") || has(s.metNpcs, "eleanor"),
+    hint: "Sarah's brother. Gambling debts.",
+  },
+  {
+    id: "p:kevin",
+    kind: "person",
+    label: "Kevin Pratt",
+    x: 92, y: 38,
+    href: "/chat/kevin",
+    visible: s => has(s.unlockedLocations, "loc_olive_bar") || has(s.metNpcs, "sarah"),
+    hint: "Bartender at 'Olive'.",
+  },
+  {
+    id: "p:eleanor",
+    kind: "person",
+    label: "Mrs. Eleanor Carrington",
+    x: 8, y: 62,
+    href: "/chat/eleanor",
+    visible: s => has(s.metNpcs, "david") || has(s.unlockedLocations, "loc_cole_house"),
+    hint: "Elderly neighbor. Sees a lot from her porch.",
+  },
+];
+
+// === Locations ===
+
+const locations: BoardNode[] = [
+  {
+    id: "l:bakery_main",
+    kind: "location",
+    label: "Cole & Sons Bakery",
+    x: 50, y: 80,
+    href: "/location/loc_bakery_main",
+    visible: ALWAYS,
+    hint: "Front of the shop. Crime scene tape on the back door.",
+  },
+  {
+    id: "l:backroom",
+    kind: "location",
+    label: "Bakery Backroom",
+    x: 36, y: 90,
+    href: "/location/loc_backroom",
+    visible: ALWAYS,
+    hint: "Crime scene. Margaret was found here.",
+  },
+  {
+    id: "l:cole_house",
+    kind: "location",
+    label: "Cole Family Home",
+    x: 14, y: 80,
+    href: "/location/loc_cole_house",
+    visible: ALWAYS,
+    hint: "The Coles' house.",
+  },
+  {
+    id: "l:olive_bar",
+    kind: "location",
+    label: "'Olive' Bar",
+    x: 86, y: 80,
+    href: "/location/loc_olive_bar",
+    visible: s => has(s.unlockedLocations, "loc_olive_bar"),
+    hint: "Bar on Olive Street. Sarah was here Sunday night.",
+  },
+  {
+    id: "l:brennan_office",
+    kind: "location",
+    label: "Brennan Real Estate",
+    x: 92, y: 92,
+    href: "/location/loc_brennan_office",
+    visible: s => has(s.unlockedLocations, "loc_brennan_office"),
+    hint: "Tom's office. Mill Creek runs behind it.",
+  },
+];
+
+// === Clues ===
+//
+// Visibility = simply "discovered". Position floats near the related person
+// or location. We use a small offset so multiple clues around one anchor
+// don't overlap.
+
+type ClueDef = {
+  id: string;
+  evId: string;
+  label: string;
+  x: number;
+  y: number;
+};
+
+const clueDefs: ClueDef[] = [
+  { id: "c:footprint_44", evId: "ev_footprint_44", label: "Size 12 print", x: 78, y: 60 },
+  { id: "c:partial_11", evId: "ev_partial_footprint_size_11", label: "Size 11 print", x: 64, y: 32 },
+  { id: "c:margaret_note", evId: "ev_margaret_note", label: "Margaret's note", x: 56, y: 42 },
+  { id: "c:missing_paperweight", evId: "ev_missing_paperweight", label: "Missing paperweight", x: 50, y: 50 },
+  { id: "c:cell_log_tom", evId: "ev_margaret_cell_log_tom", label: "Tom's 22:15 call", x: 70, y: 30 },
+  { id: "c:dna_door", evId: "ev_dna_door_handle", label: "DNA on door handle", x: 36, y: 78 },
+  { id: "c:bar_receipt", evId: "ev_bar_receipt", label: "Bar receipt 23:04", x: 84, y: 56 },
+  { id: "c:bank", evId: "ev_bank_statements", label: "$47k bank statements", x: 80, y: 44 },
+  { id: "c:phone_log", evId: "ev_phone_log", label: "David's call to Helen", x: 22, y: 28 },
+  { id: "c:tom_affair", evId: "ev_tom_margaret_affair", label: "Tom-Margaret affair", x: 60, y: 28 },
+  { id: "c:linda_divorce", evId: "ev_linda_divorce_filing", label: "Linda's divorce filing", x: 78, y: 14 },
+  { id: "c:tom_key", evId: "ev_tom_old_key", label: "Tom's old bakery key", x: 88, y: 20 },
+  { id: "c:cam_glimpse", evId: "ev_security_camera_glimpse", label: "Camera @ 23:38", x: 78, y: 72 },
+  { id: "c:weapon_creek", evId: "ev_paperweight_in_creek", label: "Paperweight in creek", x: 96, y: 86 },
+  { id: "c:dna_weapon", evId: "ev_dna_paperweight", label: "DNA on paperweight", x: 96, y: 78 },
+  { id: "c:eleanor_daniel", evId: "ev_eleanor_witness_daniel", label: "Daniel @ 21:45", x: 14, y: 70 },
+  { id: "c:eleanor_car", evId: "ev_eleanor_witness_car", label: "Fancy car @ 23:30", x: 6, y: 50 },
+  { id: "c:eleanor_helen", evId: "ev_eleanor_witness_helen", label: "Helen visiting David", x: 14, y: 50 },
+];
+
+const clues: BoardNode[] = clueDefs.map(c => ({
+  id: c.id,
+  kind: "clue",
+  label: c.label,
+  x: c.x,
+  y: c.y,
+  evidenceId: c.evId,
+  visible: s => has(s.discoveredEvidence, c.evId),
+  hint: undefined,
+}));
+
+export const BOARD_NODES: BoardNode[] = [...people, ...locations, ...clues];
+
+// === Edges ===
+
+export const BOARD_EDGES: BoardEdge[] = [
+  // location ↔ location
+  { from: "l:bakery_main", to: "l:backroom", label: "behind" },
+
+  // person ↔ family / partnership
+  { from: "p:margaret", to: "p:david", label: "married" },
+  { from: "p:margaret", to: "p:sarah", label: "business partners" },
+  { from: "p:margaret", to: "p:tom", label: "old friends" },
+  { from: "p:margaret", to: "p:martin", label: "employer" },
+  { from: "p:david", to: "p:tyler", label: "father" },
+  { from: "p:sarah", to: "p:daniel", label: "siblings" },
+  { from: "p:david", to: "p:eleanor", label: "neighbors" },
+
+  // person ↔ location (regular presence)
+  { from: "p:margaret", to: "l:bakery_main" },
+  { from: "p:margaret", to: "l:backroom" },
+  { from: "p:martin", to: "l:bakery_main" },
+  { from: "p:david", to: "l:cole_house" },
+  { from: "p:tyler", to: "l:cole_house" },
+  { from: "p:eleanor", to: "l:cole_house" },
+  { from: "p:kevin", to: "l:olive_bar" },
+  { from: "p:tom", to: "l:brennan_office" },
+
+  // clue → person / location it implicates or originates from
+  { from: "c:margaret_note", to: "p:sarah" },
+  { from: "c:footprint_44", to: "p:sarah" },
+  { from: "c:bar_receipt", to: "p:sarah" },
+  { from: "c:bank", to: "p:sarah" },
+  { from: "c:partial_11", to: "p:tom" },
+  { from: "c:cell_log_tom", to: "p:tom" },
+  { from: "c:tom_affair", to: "p:tom" },
+  { from: "c:linda_divorce", to: "p:tom" },
+  { from: "c:tom_key", to: "p:tom" },
+  { from: "c:cam_glimpse", to: "p:tom" },
+  { from: "c:weapon_creek", to: "p:tom" },
+  { from: "c:dna_weapon", to: "p:tom" },
+  { from: "c:phone_log", to: "p:david" },
+  { from: "c:dna_door", to: "p:daniel" },
+  { from: "c:eleanor_daniel", to: "p:daniel" },
+  { from: "c:eleanor_car", to: "p:tom" },
+  { from: "c:eleanor_helen", to: "p:david" },
+  { from: "c:weapon_creek", to: "l:brennan_office" },
+  { from: "c:tom_key", to: "l:brennan_office" },
+];
+
+export function visibleNodes(state: PlayerState): BoardNode[] {
+  return BOARD_NODES.filter(n => n.visible(state));
+}
+
+export function visibleEdges(state: PlayerState, visibleIds: Set<string>): BoardEdge[] {
+  return BOARD_EDGES.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to));
+}
+
+export function nodeById(id: string): BoardNode | undefined {
+  return BOARD_NODES.find(n => n.id === id);
+}
