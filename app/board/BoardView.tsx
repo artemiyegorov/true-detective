@@ -162,6 +162,7 @@ function BoardCanvas({
   };
 
   const positioned = nodes.map(n => ({ node: n, pos: resolvedPos(n) }));
+  const cardScale = scaleForCount(nodes.length);
 
   return (
     <div
@@ -211,6 +212,7 @@ function BoardCanvas({
             key={node.id}
             node={node}
             pos={pos}
+            scale={cardScale}
             containerRef={containerRef}
             onClick={() => onNodeClick(node)}
           />
@@ -218,6 +220,15 @@ function BoardCanvas({
       </AnimatePresence>
     </div>
   );
+}
+
+// Card scale shrinks as the wall fills up so things still fit on
+// mobile. 4-6 cards stay full size; from there each extra card trims
+// ~3% off, capped at 55%.
+function scaleForCount(count: number): number {
+  if (count <= 6) return 1;
+  const s = 1 - (count - 6) * 0.03;
+  return Math.max(0.55, s);
 }
 
 // Stable per-node tilt so pinned cards look hand-placed, not aligned.
@@ -235,11 +246,13 @@ function naturalRotation(id: string): number {
 function PinnedCard({
   node,
   pos,
+  scale,
   containerRef,
   onClick,
 }: {
   node: BoardNode;
   pos: { x: number; y: number; rot: number };
+  scale: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onClick: () => void;
 }) {
@@ -288,10 +301,10 @@ function PinnedCard({
         rotate: pos.rot,
         zIndex: dragging ? 30 : 1,
       }}
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.6 }}
-      whileHover={{ scale: 1.04, rotate: 0, zIndex: 20 }}
+      initial={{ opacity: 0, scale: scale * 0.6 }}
+      animate={{ opacity: 1, scale }}
+      exit={{ opacity: 0, scale: scale * 0.6 }}
+      whileHover={{ scale: scale * 1.06, rotate: 0, zIndex: 20 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
     >
       {/* Push-pin */}
