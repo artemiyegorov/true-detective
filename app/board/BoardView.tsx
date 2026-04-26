@@ -94,10 +94,10 @@ export default function BoardView({
           <button
             onClick={() => setShowImportant(true)}
             aria-label="Important"
-            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 flex items-center gap-1.5"
+            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 flex items-center gap-2"
           >
-            <span className="text-lg leading-none">★</span>
-            <span className="font-elite text-[10px] uppercase tracking-[0.2em]">{importantCount}</span>
+            <span className="text-xl leading-none">★</span>
+            <span className="font-elite text-base leading-none tabular-nums">{importantCount}</span>
           </button>
         </div>
       </header>
