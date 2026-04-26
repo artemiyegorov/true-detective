@@ -48,6 +48,10 @@ export default async function LocationPage({ params }: { params: { locId: string
   // Hand-curated location photos. Add new entries as art is delivered.
   const LOC_IMAGE: Record<string, string> = {
     loc_bakery_main: "/bakery.png",
+    loc_backroom: "/backroom.png",
+    loc_cole_house: "/cole-house.png",
+    loc_olive_bar: "/olive-bar.png",
+    loc_brennan_office: "/toms-office.png",
   };
 
   return (

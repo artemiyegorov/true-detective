@@ -76,18 +76,21 @@ export default function CasebookView({
           home
         </Link>
         <div className="flex justify-center"><Tabs /></div>
-        <div className="flex items-center justify-end gap-3 text-xs font-elite text-neutral-500">
+        <div className="flex items-center justify-end gap-3">
           <button
-            onClick={() => setFilter("all")}
-            className={`uppercase tracking-[0.2em] px-2 py-1.5 rounded ${filter === "all" ? "bg-neutral-100 text-neutral-900" : "hover:text-neutral-200"}`}
+            onClick={() => setFilter(filter === "important" ? "all" : "important")}
+            aria-pressed={filter === "important"}
+            aria-label="Filter important"
+            className={`rounded-full ring-1 px-3 py-1.5 flex items-center gap-1.5 transition ${
+              filter === "important"
+                ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                : "ring-rose-800/60 text-rose-200 hover:bg-rose-950/40"
+            }`}
           >
-            all
-          </button>
-          <button
-            onClick={() => setFilter("important")}
-            className={`uppercase tracking-[0.2em] px-2 py-1.5 rounded ${filter === "important" ? "bg-rose-900/60 text-rose-100" : "hover:text-rose-200"}`}
-          >
-            ★ important
+            <span className="text-lg leading-none">★</span>
+            <span className="font-elite text-[10px] uppercase tracking-[0.2em]">
+              {filter === "important" ? "important" : "all"}
+            </span>
           </button>
         </div>
       </header>
@@ -202,13 +205,30 @@ function ClueModal({
       className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
-      <button
-        onClick={onClose}
-        aria-label="Close"
-        className="fixed top-5 right-5 z-50 w-10 h-10 rounded-full bg-black/70 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-300 hover:text-white flex items-center justify-center text-lg leading-none"
-      >
-        ×
-      </button>
+      {/* Top-right action row: pin star + close ×, same row, same size */}
+      <div className="fixed top-5 right-5 z-50 flex items-center gap-2">
+        {isEvidence && (
+          <button
+            type="button"
+            onClick={() => (isPinned ? unpinImportant(row.id) : pinImportant(row.id))}
+            aria-label={isPinned ? "Unpin" : "Pin as important"}
+            className={`w-10 h-10 rounded-full ring-1 flex items-center justify-center text-xl leading-none transition ${
+              isPinned
+                ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                : "bg-black/40 ring-rose-700 text-rose-300 hover:bg-rose-900/40 hover:text-white"
+            }`}
+          >
+            {isPinned ? "★" : "☆"}
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="w-10 h-10 rounded-full bg-black/70 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-300 hover:text-white flex items-center justify-center text-lg leading-none"
+        >
+          ×
+        </button>
+      </div>
 
       {detail?.image && (
         <div className="relative w-full h-[40vh] noir-vignette">
@@ -241,18 +261,6 @@ function ClueModal({
           <RelatedCards title="Found at" nodes={locationsToShow} onItem={onClose} />
         )}
 
-        <div className="flex flex-wrap gap-2 pt-4">
-          <button
-            onClick={() => (isPinned ? unpinImportant(row.id) : pinImportant(row.id))}
-            className={`font-elite text-[11px] uppercase tracking-wider rounded px-4 py-2 ring-1 transition ${
-              isPinned
-                ? "bg-rose-900/50 ring-rose-700 text-rose-100"
-                : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
-            }`}
-          >
-            {isPinned ? "★ pinned" : "☆ pin important"}
-          </button>
-        </div>
       </motion.div>
     </motion.div>
   );
@@ -269,29 +277,50 @@ function RelatedCards({
 }) {
   return (
     <div>
-      <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-2">
+      <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-3">
         {title}
       </p>
       <div className="flex flex-wrap gap-3">
-        {nodes.map(n => (
-          <Link
-            key={n.id}
-            href={n.href ?? "#"}
-            onClick={onItem}
-            className="flex items-center gap-2 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition"
-          >
-            {n.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={n.image} alt={n.label} className="w-8 h-10 object-cover rounded-sm" />
-            ) : (
-              <span className="w-8 h-10 rounded-sm bg-neutral-800 flex items-center justify-center font-elite text-[10px] text-neutral-500">
-                {(n.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
-              </span>
-            )}
-            <span className="font-fell text-sm text-neutral-100">{n.label}</span>
-          </Link>
-        ))}
+        {nodes.map(n => <RelatedPolaroid key={n.id} node={n} onClick={onItem} />)}
       </div>
     </div>
+  );
+}
+
+function RelatedPolaroid({ node, onClick }: { node: BoardNode; onClick: () => void }) {
+  const initials = (node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase();
+  const isVictim = node.kind === "person" && !node.href;
+  const frameBg = isVictim ? "bg-[#0a0a0a]" : "bg-[#f3ede0]";
+  const captionColor = isVictim ? "text-neutral-200" : "text-[#1a1a1a]";
+  const aspect = node.kind === "location" ? "aspect-[4/5]" : "aspect-[3/4]";
+
+  return (
+    <Link
+      href={node.href ?? "#"}
+      onClick={onClick}
+      className={`${frameBg} p-1.5 pb-2 ring-1 ring-black/30 w-[110px] transition hover:scale-[1.04]`}
+      style={{ boxShadow: "0 8px 18px -4px rgba(0,0,0,0.7), 0 2px 3px rgba(0,0,0,0.5)" }}
+    >
+      <div className={`relative ${aspect} bg-[#1f1d1a] overflow-hidden`}>
+        {node.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={node.image}
+            alt={node.label}
+            className={`w-full h-full object-cover ${isVictim ? "grayscale brightness-75 contrast-110" : ""}`}
+            draggable={false}
+          />
+        ) : (
+          <div className={`w-full h-full flex items-center justify-center font-fell text-2xl ${isVictim ? "text-neutral-500" : "text-[#f3ede0]/70"}`}>
+            {initials}
+          </div>
+        )}
+        <div className="absolute inset-0 mix-blend-multiply opacity-30 pointer-events-none"
+             style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%)" }} />
+      </div>
+      <p className={`font-fell text-[11px] text-center ${captionColor} mt-1.5 leading-tight truncate`}>
+        {node.label}
+      </p>
+    </Link>
   );
 }

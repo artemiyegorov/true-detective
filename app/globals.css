@@ -57,7 +57,8 @@ body {
 }
 
 /* Cork board canvas — the real generated noir corkboard photo with a
-   subtle vignette so the deepest shadows draw the eye toward the center. */
+   subtle vignette so the deepest shadows draw the eye toward the center.
+   On narrow viewports we swap to the portrait-oriented board-mobile.png. */
 .cork-board {
   background-color: #000;
   background-image:
@@ -66,6 +67,13 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+@media (max-width: 640px) {
+  .cork-board {
+    background-image:
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.55) 100%),
+      url("/board-mobile.png");
+  }
 }
 
 @layer utilities {

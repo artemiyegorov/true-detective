@@ -141,33 +141,40 @@ export default function LocationView({
   const sceneProse = sceneContent?.scene ?? null;
 
   return (
-    <div className="min-h-screen bg-neutral-950">
-      {/* Photo header */}
-      <div className="relative h-72 sm:h-96 overflow-hidden">
+    <div className="relative min-h-screen bg-neutral-950">
+      {/* Pinned hero photo — stays in place while content scrolls over it */}
+      <div className="fixed inset-x-0 top-0 h-[80vh] z-0 pointer-events-none">
         {locImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={locImage} alt={locName} className="absolute inset-0 w-full h-full object-cover" />
+          <img src={locImage} alt={locName} className="w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 bg-[#0a0c12]" />
+          <div className="w-full h-full bg-[#0a0c12]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-black/40" />
-        <div className="absolute top-0 left-0 right-0 px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center">
-          <Link
-            href="/"
-            className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-300 hover:text-white"
-          >
-            home
-          </Link>
-          <div className="flex justify-center"><Tabs /></div>
-          <span />
-        </div>
-        <div className="absolute bottom-4 left-6 right-6">
-          <p className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-400">Location</p>
-          <h1 className="font-fell text-3xl sm:text-4xl text-neutral-50 mt-1">{locName}</h1>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-neutral-950" />
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-6 space-y-8">
+      {/* Top tabs bar — floats above the hero */}
+      <header className="fixed top-0 inset-x-0 z-30 px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center bg-gradient-to-b from-black/70 to-transparent backdrop-blur-sm">
+        <Link
+          href="/"
+          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-200 hover:text-white"
+        >
+          home
+        </Link>
+        <div className="flex justify-center"><Tabs /></div>
+        <span />
+      </header>
+
+      {/* Spacer so the title starts well into the visible hero */}
+      <div className="h-[60vh] relative z-0" />
+
+      {/* Scrolling content slides up over the fixed hero */}
+      <div className="relative z-10 bg-neutral-950 rounded-t-[28px] shadow-[0_-30px_60px_-20px_rgba(0,0,0,0.9)] min-h-screen">
+        <div className="max-w-2xl mx-auto px-6 pt-8 pb-16 space-y-8">
+          <div>
+            <p className="font-elite text-xs uppercase tracking-[0.3em] text-neutral-500">Location</p>
+            <h1 className="font-fell text-3xl sm:text-4xl text-neutral-50 mt-1 leading-tight">{locName}</h1>
+          </div>
         {/* Atmospheric scene prose */}
         {sceneProse && (
           <p className="text-base sm:text-lg leading-relaxed text-neutral-200 italic">
@@ -245,6 +252,7 @@ export default function LocationView({
             </div>
           </Section>
         )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -376,15 +384,42 @@ function RevealModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/85 z-50 overflow-y-auto"
       onClick={onClose}
     >
+      <div className="min-h-full flex items-start sm:items-center justify-center p-4 py-12">
       <motion.div
         initial={{ scale: 0.94, y: 8 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-[#15161f] ring-1 ring-neutral-700 rounded-md max-w-lg w-full p-5 space-y-3"
+        className="relative bg-[#15161f] ring-1 ring-neutral-700 rounded-md max-w-lg w-full p-5 pr-12 space-y-3"
         onClick={e => e.stopPropagation()}
       >
+        {/* Top-right action row: pin star + close × — same size, same row */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          {(reveal.kind === "evidence" || reveal.kind === "fact") && (
+            <button
+              type="button"
+              onClick={() => (isPinned ? unpinImportant(reveal.id) : pinImportant(reveal.id))}
+              aria-label={isPinned ? "Unpin" : "Pin as important"}
+              className={`w-9 h-9 rounded-full ring-1 flex items-center justify-center text-lg leading-none transition ${
+                isPinned
+                  ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                  : "bg-transparent ring-rose-700 text-rose-300 hover:bg-rose-900/40 hover:text-white"
+              }`}
+            >
+              {isPinned ? "★" : "☆"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-9 h-9 rounded-full bg-black/40 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-400 hover:text-white flex items-center justify-center text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
         {reveal.kind === "evidence" && (
           <>
             <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-rose-300">
@@ -392,7 +427,6 @@ function RevealModal({
             </p>
             <h2 className="font-fell text-xl text-neutral-100">{reveal.name}</h2>
             <p className="text-sm text-neutral-300">{reveal.significance}</p>
-            <PinRow id={reveal.id} isPinned={isPinned} />
           </>
         )}
         {reveal.kind === "fact" && (
@@ -411,33 +445,9 @@ function RevealModal({
             <p className="text-base text-neutral-200">{reveal.text}</p>
           </>
         )}
-        <div className="pt-2 flex justify-end">
-          <button
-            onClick={onClose}
-            className="font-elite text-[10px] uppercase tracking-wider text-neutral-500 hover:text-neutral-300"
-          >
-            close
-          </button>
-        </div>
       </motion.div>
+      </div>
     </motion.div>
-  );
-}
-
-function PinRow({ id, isPinned }: { id: string; isPinned: boolean }) {
-  return (
-    <div className="pt-1">
-      <button
-        onClick={() => (isPinned ? unpinImportant(id) : pinImportant(id))}
-        className={`font-elite text-[10px] uppercase tracking-wider rounded px-3 py-1.5 ring-1 transition ${
-          isPinned
-            ? "bg-rose-900/50 ring-rose-700 text-rose-100"
-            : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
-        }`}
-      >
-        {isPinned ? "★ pinned as important" : "☆ pin as important"}
-      </button>
-    </div>
   );
 }
 
@@ -450,12 +460,13 @@ function BriefingModal({
 }) {
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/85 overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
     >
+      <div className="min-h-full flex items-start sm:items-center justify-center p-4 py-12">
       <motion.div
         className="bg-[#15161f] ring-1 ring-amber-700/40 rounded-md max-w-xl w-full p-6 space-y-4"
         initial={{ scale: 0.92, y: 12 }}
@@ -491,6 +502,7 @@ function BriefingModal({
           </button>
         </div>
       </motion.div>
+      </div>
     </motion.div>
   );
 }
