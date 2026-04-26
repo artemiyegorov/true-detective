@@ -16,7 +16,6 @@ import {
 } from "@/lib/player-state";
 import { BOARD_EDGES, BOARD_NODES, visibleNodes, type BoardNode } from "@/lib/board-graph";
 import { sceneFor } from "@/lib/scene-content";
-import Tabs from "../../Tabs";
 import RelatedPolaroid from "../../RelatedPolaroid";
 
 type Hotspot = {
@@ -154,16 +153,15 @@ export default function LocationView({
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-neutral-950" />
       </div>
 
-      {/* Top tabs bar — floats above the hero */}
-      <header className="fixed top-0 inset-x-0 z-30 px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center bg-gradient-to-b from-black/70 to-transparent backdrop-blur-sm">
+      {/* Top — back to board only (tabs are in the floating bottom dock) */}
+      <header className="fixed top-0 inset-x-0 z-30 flex items-end" style={{ padding: "12px 18px 8px" }}>
         <Link
-          href="/"
-          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-200 hover:text-white"
+          href="/board"
+          className="font-elite uppercase"
+          style={{ fontSize: 10, letterSpacing: "0.32em", color: "var(--fg)", padding: 4 }}
         >
-          home
+          ← BOARD
         </Link>
-        <div className="flex justify-center"><Tabs /></div>
-        <span />
       </header>
 
       {/* Spacer so the title starts well into the visible hero */}

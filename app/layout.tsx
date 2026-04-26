@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cinzel, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import Tabs from "./Tabs";
 
 // Headlines and names — Cinzel (display serif from the Blackfile design).
 const display = Cinzel({
@@ -38,6 +39,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${mono.variable} ${display.variable} ${inter.variable} antialiased`}>
         {children}
+        <Tabs />
       </body>
     </html>
   );

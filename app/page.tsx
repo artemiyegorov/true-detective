@@ -51,7 +51,7 @@ export default async function Home() {
       className="min-h-screen relative noir-grain"
       style={{ background: "var(--bg)", color: "var(--fg)" }}
     >
-      <div className="max-w-xl mx-auto px-[18px] pt-1 pb-24 relative z-[1]">
+      <div className="max-w-xl mx-auto px-[18px] pt-1 pb-32 relative z-[1]">
         {/* Masthead — hero image */}
         <div
           className="-mx-[18px] relative aspect-[3/2] overflow-hidden"

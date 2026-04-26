@@ -11,7 +11,6 @@ import {
   type PlayerState,
 } from "@/lib/player-state";
 import { BOARD_EDGES, BOARD_NODES, type BoardNode } from "@/lib/board-graph";
-import Tabs from "../Tabs";
 import RelatedPolaroid from "../RelatedPolaroid";
 
 export type ClueDetail = {
@@ -68,58 +67,107 @@ export default function CasebookView({
     );
   }
 
+  const totalEntries = state.discoveredEvidence.length;
+  const starredCount = state.importantClues.length;
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
+    <div className="relative min-h-screen noir-grain" style={{ background: "var(--bg)", color: "var(--fg)" }}>
+      {/* Top back link */}
+      <div className="absolute top-0 inset-x-0 h-14 z-10 flex items-end" style={{ padding: "0 18px 8px" }}>
         <Link
           href="/"
-          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-400 hover:text-neutral-100"
+          className="font-elite uppercase"
+          style={{ fontSize: 10, letterSpacing: "0.32em", color: "var(--fg)", padding: 4 }}
         >
-          home
+          ← cases
         </Link>
-        <div className="flex justify-center"><Tabs /></div>
-        <div className="flex items-center justify-end gap-3">
-          <button
-            onClick={() => setFilter(filter === "important" ? "all" : "important")}
-            aria-pressed={filter === "important"}
-            aria-label="Filter important"
-            className={`rounded-full ring-1 px-3 py-1.5 inline-flex items-center gap-2 h-9 transition ${
-              filter === "important"
-                ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                : "ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/15"
-            }`}
-          >
-            <Star
-              size={18}
-              strokeWidth={1.5}
-              className={`block ${filter === "important" ? "fill-white text-white" : "fill-[var(--accent)]/80 text-[var(--accent)]"}`}
-            />
-            <span className="font-elite text-base tabular-nums leading-[18px] block">
-              {state.importantClues.length}
-            </span>
-          </button>
-        </div>
-      </header>
+      </div>
 
-      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-6">
-        {rows.length === 0 ? (
-          <p className="italic text-sm text-neutral-500">
-            {filter === "important"
-              ? "Nothing pinned as important yet."
-              : "Nothing in your casebook yet. Investigate locations and talk to people."}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {rows.map(r => (
+      <div className="relative z-[2]" style={{ padding: "74px 18px 110px" }}>
+        <div
+          className="font-elite uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.45)" }}
+        >
+          {totalEntries} entries{starredCount ? ` · ${starredCount} starred` : ""}
+        </div>
+
+        <h1
+          className="font-fell uppercase"
+          style={{
+            fontSize: 30,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            margin: "8px 0 0",
+          }}
+        >
+          Casebook
+        </h1>
+
+        {/* 22×1 oxblood rule */}
+        <div style={{ width: 22, height: 1, background: "var(--accent)", marginTop: 14 }} />
+
+        {/* Filters: All / Starred */}
+        <div
+          className="flex"
+          style={{
+            marginTop: 22,
+            gap: 18,
+            paddingBottom: 16,
+            borderBottom: "1px solid rgba(232,225,211,0.12)",
+          }}
+        >
+          {(["all", "important"] as const).map(f => {
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className="font-elite uppercase inline-flex items-center"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.22em",
+                  gap: 6,
+                  paddingBottom: 4,
+                  color: active ? "var(--accent)" : "rgba(232,225,211,0.5)",
+                  borderBottom: `1px solid ${active ? "var(--accent)" : "transparent"}`,
+                }}
+              >
+                {f === "important" && (
+                  <Star
+                    size={10}
+                    strokeWidth={1.6}
+                    className={active ? "fill-[var(--accent)]" : ""}
+                  />
+                )}
+                {f === "all" ? "All" : "Starred"}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Cards */}
+        <div className="flex flex-col" style={{ marginTop: 16, gap: 10 }}>
+          {rows.length === 0 ? (
+            <p className="italic" style={{ fontSize: 14, color: "rgba(232,225,211,0.45)" }}>
+              {filter === "important"
+                ? "Nothing pinned as important yet."
+                : "Nothing in your casebook yet. Investigate locations and talk to people."}
+            </p>
+          ) : (
+            rows.map(r => (
               <CasebookRowItem
                 key={r.id}
                 row={r}
                 isPinned={state.importantClues.includes(r.id)}
                 onOpen={() => setOpenItem(r)}
+                onToggleStar={() => {
+                  if (state.importantClues.includes(r.id)) unpinImportant(r.id);
+                  else pinImportant(r.id);
+                }}
               />
-            ))}
-          </ul>
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -140,30 +188,93 @@ function CasebookRowItem({
   row,
   isPinned,
   onOpen,
+  onToggleStar,
 }: {
   row: ClueRow;
   isPinned: boolean;
   onOpen: () => void;
+  onToggleStar: () => void;
 }) {
   if (row.kind !== "evidence") return null;
+  const sourceLabel = row.detail.foundAt
+    ? `Found · ${row.detail.foundAt.replace(/^loc_/, "").replace(/_/g, " ")}`
+    : "Casebook";
+
   return (
-    <li>
+    <div
+      className="relative flex items-start"
+      style={{
+        background: "rgba(232,225,211,0.04)",
+        border: "1px solid rgba(232,225,211,0.08)",
+        padding: "14px 14px 14px 18px",
+        gap: 12,
+      }}
+    >
+      {/* red left bar */}
+      <div
+        className="absolute"
+        style={{
+          left: 0,
+          top: 10,
+          bottom: 10,
+          width: 3,
+          background: isPinned ? "var(--accent)" : "rgba(168,57,46,0.5)",
+        }}
+      />
       <button
         onClick={onOpen}
-        className="w-full text-left rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-700 px-4 py-3 transition flex gap-3"
+        className="flex-1 min-w-0 text-left bg-transparent border-0 p-0"
       >
-        <span className="shrink-0 w-1 self-stretch rounded bg-[var(--accent)]" />
-        <div className="flex-1 min-w-0">
-          <p className="font-fell text-base text-neutral-100">{row.detail.name}</p>
-          {row.detail.significance && (
-            <p className="text-sm text-neutral-400 italic mt-0.5 line-clamp-1">{row.detail.significance}</p>
-          )}
+        <div
+          className="font-fell"
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: "var(--fg)",
+            lineHeight: 1.25,
+            letterSpacing: "0.01em",
+          }}
+        >
+          {row.detail.name}
         </div>
-        {isPinned && (
-          <span className="shrink-0 self-start font-elite text-[9px] uppercase tracking-wider text-[var(--accent)]">★</span>
+        {row.detail.significance && (
+          <div
+            className="italic"
+            style={{
+              fontSize: 13.5,
+              color: "rgba(232,225,211,0.55)",
+              marginTop: 6,
+              lineHeight: 1.4,
+            }}
+          >
+            {row.detail.significance}
+          </div>
         )}
+        <div
+          className="font-elite uppercase"
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.22em",
+            color: "rgba(232,225,211,0.4)",
+            marginTop: 8,
+          }}
+        >
+          {sourceLabel}
+        </div>
       </button>
-    </li>
+      <button
+        onClick={onToggleStar}
+        aria-label={isPinned ? "Unstar" : "Star"}
+        className="bg-transparent border-0 flex items-center"
+        style={{ padding: 4, color: isPinned ? "var(--accent)" : "rgba(232,225,211,0.4)" }}
+      >
+        <Star
+          size={16}
+          strokeWidth={1.4}
+          className={isPinned ? "fill-current" : ""}
+        />
+      </button>
+    </div>
   );
 }
 
@@ -208,32 +319,63 @@ function ClueModal({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
+      className="fixed inset-0 z-50 overflow-y-auto noir-grain"
+      style={{ background: "var(--bg)" }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
-      {/* Top-right action row: pin star + close ×, same row, same size */}
-      <div className="fixed top-5 right-5 z-50 flex items-center gap-2">
-        {isEvidence && (
-          <button
-            type="button"
-            onClick={() => (isPinned ? unpinImportant(row.id) : pinImportant(row.id))}
-            aria-label={isPinned ? "Unpin" : "Pin as important"}
-            className={`w-10 h-10 rounded-full ring-1 flex items-center justify-center text-xl leading-none transition ${
-              isPinned
-                ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                : "bg-black/40 ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/30 hover:text-white"
-            }`}
-          >
-            {isPinned ? "★" : "☆"}
-          </button>
-        )}
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="w-10 h-10 rounded-full bg-black/70 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-300 hover:text-white flex items-center justify-center text-lg leading-none"
+      {/* Top action row: breadcrumb left, star + close (38×38 squares) right */}
+      <div
+        className="fixed inset-x-0 z-50 flex justify-between items-center"
+        style={{ top: 0, padding: "20px 18px 0" }}
+      >
+        <div
+          className="font-elite uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.5)" }}
         >
-          ×
-        </button>
+          Casebook / {isEvidence ? "Evidence" : "Note"}
+        </div>
+        <div className="flex" style={{ gap: 10 }}>
+          {isEvidence && (
+            <button
+              type="button"
+              onClick={() => (isPinned ? unpinImportant(row.id) : pinImportant(row.id))}
+              aria-label={isPinned ? "Unstar" : "Star"}
+              className="flex items-center justify-center"
+              style={{
+                width: 38,
+                height: 38,
+                background: "transparent",
+                border: `1px solid ${isPinned ? "var(--accent)" : "rgba(232,225,211,0.25)"}`,
+                color: isPinned ? "var(--accent)" : "rgba(232,225,211,0.7)",
+              }}
+            >
+              <Star
+                size={16}
+                strokeWidth={1.4}
+                className={isPinned ? "fill-current" : ""}
+              />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex items-center justify-center"
+            style={{
+              width: 38,
+              height: 38,
+              background: "transparent",
+              border: "1px solid rgba(232,225,211,0.25)",
+              color: "rgba(232,225,211,0.85)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M2 2l10 10M12 2L2 12"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {detail?.image && (
@@ -245,26 +387,59 @@ function ClueModal({
       )}
 
       <motion.div
-        className={`max-w-2xl mx-auto px-6 py-8 space-y-6 relative ${detail?.image ? "-mt-12" : "pt-24"}`}
+        className="max-w-2xl mx-auto relative"
+        style={{ padding: "110px 22px 60px" }}
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
       >
-        <div>
-          <h2 className="font-fell text-3xl sm:text-4xl text-neutral-50 leading-tight">
-            {isEvidence ? detail?.name : row.text}
-          </h2>
+        <div
+          className="font-elite uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.45)" }}
+        >
+          {isEvidence ? "Physical · " : "Note · "}
+          <span style={{ color: "rgba(232,225,211,0.4)" }}>#{row.id.replace(/^ev_|^fact_/, "").toUpperCase()}</span>
         </div>
 
+        <h1
+          className="font-fell"
+          style={{
+            fontSize: 30,
+            fontWeight: 600,
+            letterSpacing: "0.01em",
+            margin: "10px 0 0",
+            lineHeight: 1.1,
+            color: "var(--fg)",
+          }}
+        >
+          {isEvidence ? detail?.name : row.text}
+        </h1>
+
+        {/* 22×1 oxblood rule */}
+        <div style={{ width: 22, height: 1, background: "var(--accent)", marginTop: 16 }} />
+
         {isEvidence && detail?.significance && (
-          <p className="text-base text-neutral-200 leading-relaxed">{detail.significance}</p>
+          <p
+            style={{
+              fontSize: 15.5,
+              lineHeight: 1.55,
+              color: "rgba(232,225,211,0.88)",
+              marginTop: 18,
+            }}
+          >
+            {detail.significance}
+          </p>
         )}
 
-        {connectedPeople.length > 0 && (
-          <RelatedCards title="Connected to" nodes={connectedPeople} onItem={onClose} />
-        )}
         {locationsToShow.length > 0 && (
-          <RelatedCards title="Found at" nodes={locationsToShow} onItem={onClose} />
+          <div style={{ marginTop: 32 }}>
+            <RelatedCards title="Found at" nodes={locationsToShow} onItem={onClose} />
+          </div>
+        )}
+        {connectedPeople.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <RelatedCards title="Connections" nodes={connectedPeople} onItem={onClose} />
+          </div>
         )}
 
       </motion.div>

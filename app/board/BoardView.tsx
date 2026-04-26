@@ -20,7 +20,6 @@ import {
   visibleEdges,
   type BoardNode,
 } from "@/lib/board-graph";
-import Tabs from "../Tabs";
 import RelatedPolaroid from "../RelatedPolaroid";
 
 export type ClueDetail = {
@@ -86,21 +85,23 @@ export default function BoardView({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header — home left, tabs center, reset + important right */}
-      <header className="px-6 py-3 grid grid-cols-[auto_1fr_auto] gap-4 items-center border-b border-neutral-800/80 bg-black/60 backdrop-blur z-10">
+      {/* Header — home left, reset + important right (tabs are in the
+          floating bottom dock, mounted in the root layout). */}
+      <header className="px-6 py-3 flex items-center justify-between border-b border-[rgba(232,225,211,0.12)] bg-black/60 backdrop-blur z-10">
         <Link
           href="/"
-          className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-400 hover:text-neutral-100"
+          className="font-elite uppercase"
+          style={{ fontSize: 10, letterSpacing: "0.3em", color: "rgba(232,225,211,0.55)" }}
         >
-          home
+          ← cases
         </Link>
-        <div className="flex justify-center"><Tabs /></div>
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => {
               if (confirm("Reset all card positions to default?")) resetBoardLayout();
             }}
-            className="font-elite text-[10px] uppercase tracking-[0.2em] text-neutral-500 hover:text-neutral-200 px-2 py-1.5"
+            className="font-elite uppercase"
+            style={{ fontSize: 10, letterSpacing: "0.32em", color: "rgba(232,225,211,0.5)", padding: "6px 8px" }}
             title="Reset card positions"
           >
             reset
@@ -108,18 +109,22 @@ export default function BoardView({
           <button
             onClick={() => setShowImportant(true)}
             aria-label="Important"
-            className="rounded-full ring-1 ring-[var(--accent)]/60 px-3 py-1.5 text-[var(--accent)] hover:bg-[var(--accent)]/15 inline-flex items-center gap-2 h-9"
+            className="inline-flex items-center gap-2"
+            style={{
+              border: "1px solid rgba(168,57,46,0.6)",
+              padding: "6px 12px",
+              color: "var(--accent)",
+              height: 36,
+            }}
           >
-            <Star size={18} strokeWidth={1.5} className="block fill-[var(--accent)]/80 text-[var(--accent)]" />
-            <span className="font-elite text-base tabular-nums leading-[18px] block">
-              {importantCount}
-            </span>
+            <Star size={16} strokeWidth={1.6} className="block fill-[var(--accent)]/80 text-[var(--accent)]" />
+            <span className="font-elite text-base tabular-nums leading-[16px]">{importantCount}</span>
           </button>
         </div>
       </header>
 
-      {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* Canvas — leave room at the bottom for the floating tab dock */}
+      <div className="flex-1 relative overflow-hidden" style={{ marginBottom: 80 }}>
         <BoardCanvas
           nodes={data.nodes}
           edges={data.edges}
