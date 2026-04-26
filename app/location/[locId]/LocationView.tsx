@@ -361,8 +361,8 @@ function RevealModal({
               aria-label={isPinned ? "Unpin" : "Pin as important"}
               className={`w-9 h-9 rounded-full ring-1 flex items-center justify-center text-lg leading-none transition ${
                 isPinned
-                  ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                  : "bg-transparent ring-rose-700 text-rose-300 hover:bg-rose-900/40 hover:text-white"
+                  ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                  : "bg-transparent ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/30 hover:text-white"
               }`}
             >
               {isPinned ? "★" : "☆"}
@@ -380,7 +380,7 @@ function RevealModal({
 
         {reveal.kind === "evidence" && (
           <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-rose-300">
+            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-[var(--accent)]">
               Evidence · added to casebook
             </p>
             <h2 className="font-fell text-xl text-neutral-100">{reveal.name}</h2>

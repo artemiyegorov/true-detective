@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import { Special_Elite, IM_Fell_English, Inter } from "next/font/google";
+import { Cinzel, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
-// Tags, monospace accents — typewriter font.
-const elite = Special_Elite({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-elite",
-  display: "swap",
-  adjustFontFallback: false,
-});
-
-// Headlines and names only.
-const fell = IM_Fell_English({
-  weight: "400",
-  style: ["normal", "italic"],
+// Headlines and names — Cinzel (display serif from the Blackfile design).
+const display = Cinzel({
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-fell",
   display: "swap",
-  adjustFontFallback: false,
 });
 
-// All UI — body, buttons, descriptions, lists.
+// Tags, dateline, mono accents — JetBrains Mono.
+const mono = JetBrains_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  variable: "--font-elite",
+  display: "swap",
+});
+
+// Body / UI — Inter.
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -39,7 +36,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${elite.variable} ${fell.variable} ${inter.variable} antialiased`}>
+      <body className={`${mono.variable} ${display.variable} ${inter.variable} antialiased`}>
         {children}
       </body>
     </html>

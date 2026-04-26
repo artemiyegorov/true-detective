@@ -85,14 +85,14 @@ export default function CasebookView({
             aria-label="Filter important"
             className={`rounded-full ring-1 px-3 py-1.5 inline-flex items-center gap-2 h-9 transition ${
               filter === "important"
-                ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                : "ring-rose-800/60 text-rose-200 hover:bg-rose-950/40"
+                ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                : "ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/15"
             }`}
           >
             <Star
               size={18}
               strokeWidth={1.5}
-              className={`block ${filter === "important" ? "fill-white text-white" : "fill-rose-300/80 text-rose-300"}`}
+              className={`block ${filter === "important" ? "fill-white text-white" : "fill-[var(--accent)]/80 text-[var(--accent)]"}`}
             />
             <span className="font-elite text-base tabular-nums leading-[18px] block">
               {state.importantClues.length}
@@ -152,7 +152,7 @@ function CasebookRowItem({
         onClick={onOpen}
         className="w-full text-left rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-700 px-4 py-3 transition flex gap-3"
       >
-        <span className="shrink-0 w-1 self-stretch rounded bg-rose-700" />
+        <span className="shrink-0 w-1 self-stretch rounded bg-[var(--accent)]" />
         <div className="flex-1 min-w-0">
           <p className="font-fell text-base text-neutral-100">{row.detail.name}</p>
           {row.detail.significance && (
@@ -160,7 +160,7 @@ function CasebookRowItem({
           )}
         </div>
         {isPinned && (
-          <span className="shrink-0 self-start font-elite text-[9px] uppercase tracking-wider text-rose-300">★</span>
+          <span className="shrink-0 self-start font-elite text-[9px] uppercase tracking-wider text-[var(--accent)]">★</span>
         )}
       </button>
     </li>
@@ -220,8 +220,8 @@ function ClueModal({
             aria-label={isPinned ? "Unpin" : "Pin as important"}
             className={`w-10 h-10 rounded-full ring-1 flex items-center justify-center text-xl leading-none transition ${
               isPinned
-                ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                : "bg-black/40 ring-rose-700 text-rose-300 hover:bg-rose-900/40 hover:text-white"
+                ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
+                : "bg-black/40 ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/30 hover:text-white"
             }`}
           >
             {isPinned ? "★" : "☆"}

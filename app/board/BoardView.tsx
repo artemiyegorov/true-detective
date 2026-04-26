@@ -108,9 +108,9 @@ export default function BoardView({
           <button
             onClick={() => setShowImportant(true)}
             aria-label="Important"
-            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 inline-flex items-center gap-2 h-9"
+            className="rounded-full ring-1 ring-[var(--accent)]/60 px-3 py-1.5 text-[var(--accent)] hover:bg-[var(--accent)]/15 inline-flex items-center gap-2 h-9"
           >
-            <Star size={18} strokeWidth={1.5} className="block fill-rose-300/80 text-rose-300" />
+            <Star size={18} strokeWidth={1.5} className="block fill-[var(--accent)]/80 text-[var(--accent)]" />
             <span className="font-elite text-base tabular-nums leading-[18px] block">
               {importantCount}
             </span>
@@ -346,7 +346,7 @@ function PinnedCard({
 function pinColor(kind: BoardNode["kind"]): string {
   if (kind === "person") return "bg-slate-300";
   if (kind === "location") return "bg-amber-300";
-  return "bg-rose-500"; // clue
+  return "bg-[var(--accent)]"; // clue
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -388,7 +388,7 @@ function PolaroidCard({ node }: { node: BoardNode }) {
         <div className="absolute inset-0 mix-blend-multiply opacity-40 pointer-events-none"
              style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%)" }} />
         {isVictim && (
-          <span className="absolute top-1 right-1 font-elite text-[8px] uppercase tracking-[0.25em] text-rose-300/80 bg-black/60 px-1 py-0.5 rounded-sm">
+          <span className="absolute top-1 right-1 font-elite text-[8px] uppercase tracking-[0.25em] text-[var(--accent)]/80 bg-black/60 px-1 py-0.5 rounded-sm">
             ✝
           </span>
         )}
@@ -432,7 +432,7 @@ function IndexCard({ node }: { node: BoardNode }) {
       className="relative w-[120px] px-2.5 py-2 bg-[#fbf6e6] ring-1 ring-black/40"
       style={{ boxShadow: "0 8px 18px -4px rgba(0,0,0,0.65), 0 2px 4px rgba(0,0,0,0.4)" }}
     >
-      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-rose-700/70">
+      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-[var(--accent)]/70">
         Location
       </p>
       <p className="font-fell text-[12px] text-[#1a1a1a] leading-tight mt-1 truncate">
@@ -446,13 +446,13 @@ function IndexCard({ node }: { node: BoardNode }) {
 function StickyCard({ node }: { node: BoardNode }) {
   return (
     <div
-      className="relative w-[110px] px-2 py-1.5 bg-[#f0d9b5] ring-1 ring-rose-900/30"
+      className="relative w-[110px] px-2 py-1.5 bg-[#f0d9b5] ring-1 ring-[var(--accent)]/30"
       style={{
         boxShadow: "0 6px 14px -2px rgba(0,0,0,0.55)",
         clipPath: "polygon(0% 3px, 6px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%)",
       }}
     >
-      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-rose-800">
+      <p className="font-elite text-[8px] uppercase tracking-[0.3em] text-[var(--accent)]">
         Clue
       </p>
       <p className="font-fell text-[11px] text-[#1a1a1a] leading-tight mt-0.5 truncate">
@@ -469,7 +469,7 @@ function StickyCard({ node }: { node: BoardNode }) {
 const KIND_ACCENT: Record<BoardNode["kind"], string> = {
   location: "text-amber-300",
   person: "text-slate-200",
-  clue: "text-rose-300",
+  clue: "text-[var(--accent)]",
 };
 
 const KIND_TAG: Record<BoardNode["kind"], string> = {
@@ -618,7 +618,7 @@ function DossierPanel({
               }}
               className={`font-elite text-[11px] uppercase tracking-wider rounded px-4 py-2 ring-1 transition ${
                 isPinned
-                  ? "bg-rose-900/50 ring-rose-700 text-rose-100"
+                  ? "bg-[var(--accent)]/40 ring-[var(--accent)]/60 text-[var(--fg)]"
                   : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
               }`}
             >
@@ -679,7 +679,7 @@ function DossierKnown({
             const ev = c.refId ? evidenceById[c.refId] : null;
             return (
               <li key={c.id} className="flex gap-2">
-                <span className="text-rose-400">🔍</span>
+                <span className="text-[var(--accent)]">🔍</span>
                 <span>
                   <span className="text-neutral-100">{c.label}</span>
                   {ev?.significance && (
@@ -737,13 +737,13 @@ function ImportantPanel({
       onClick={onClose}
     >
       <motion.aside
-        className="h-full w-full max-w-sm bg-[#0d0e15] ring-1 ring-rose-900/40 p-5 overflow-y-auto"
+        className="h-full w-full max-w-sm bg-[#0d0e15] ring-1 ring-[var(--accent)]/40 p-5 overflow-y-auto"
         initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
         transition={{ type: "spring", stiffness: 280, damping: 32 }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="font-fell text-xl text-rose-100">Important findings</h2>
+          <h2 className="font-fell text-xl text-[var(--fg)]">Important findings</h2>
           <button onClick={onClose} className="font-elite text-xs uppercase text-neutral-500 hover:text-neutral-300">
             close
           </button>
@@ -755,8 +755,8 @@ function ImportantPanel({
         ) : (
           <ul className="space-y-3">
             {items.map(item => (
-              <li key={item.id} className="rounded-md ring-1 ring-rose-900/50 p-3 bg-[#15161f]">
-                <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-rose-300">
+              <li key={item.id} className="rounded-md ring-1 ring-[var(--accent)]/50 p-3 bg-[#15161f]">
+                <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-[var(--accent)]">
                   Pinned
                 </p>
                 {item.kind === "evidence" ? (
@@ -771,7 +771,7 @@ function ImportantPanel({
                 )}
                 <button
                   onClick={() => unpinImportant(item.id)}
-                  className="font-elite text-[10px] uppercase tracking-wider mt-2 text-neutral-500 hover:text-rose-300"
+                  className="font-elite text-[10px] uppercase tracking-wider mt-2 text-neutral-500 hover:text-[var(--accent)]"
                 >
                   unpin
                 </button>

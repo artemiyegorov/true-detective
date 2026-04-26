@@ -55,7 +55,7 @@ export default function RelatedPolaroid({
           style={{ background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%)" }}
         />
         {isVictim && (
-          <span className="absolute top-1 right-1 font-elite text-[8px] uppercase tracking-[0.25em] text-rose-300/80 bg-black/60 px-1 py-0.5 rounded-sm">
+          <span className="absolute top-1 right-1 font-elite text-[8px] uppercase tracking-[0.25em] text-[var(--accent)]/80 bg-black/60 px-1 py-0.5 rounded-sm">
             ✝
           </span>
         )}

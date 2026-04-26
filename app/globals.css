@@ -2,20 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* === Blackfile design tokens (from claude.ai/design Blackfile.html) === */
 :root {
-  --bg-deep: #07080d;
-  --bg-grain: #0d0e15;
-  --bg-card: #15161f;
-  --string: rgba(180, 60, 50, 0.55);
-  --string-faint: rgba(180, 60, 50, 0.25);
-  --gold: #c9a26b;
-  --slate: #5c7a99;
-  --rust: #a45347;
+  --bg: #0e0c0a;          /* near-black */
+  --fg: #e8e1d3;          /* aged off-white */
+  --accent: #a8392e;      /* dried oxblood */
+  --postit: #c9a548;      /* golden yellow */
+
+  /* Legacy aliases used by older parts of the app */
+  --bg-deep: var(--bg);
+  --bg-grain: #14110d;
+  --bg-card: #15131012;
+  --string: rgba(168, 57, 46, 0.55);
+  --string-faint: rgba(168, 57, 46, 0.35);
+  --gold: var(--postit);
+  --slate: #5a7a8c;
+  --rust: var(--accent);
 }
 
 html, body {
-  background: var(--bg-deep);
-  color: #e7e3d6;
+  background: var(--bg);
+  color: var(--fg);
 }
 
 body {
@@ -24,15 +31,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Headlines / names only. */
-.font-fell  { font-family: var(--font-fell),  Georgia, "Times New Roman", serif; }
-/* Typewriter accents — tags, monospace. */
-.font-elite { font-family: var(--font-elite), "Courier New", monospace; }
-/* Explicit UI sans (rarely needed since body inherits). */
+/* Typeface helpers
+   - .font-fell  → display headlines (Cinzel)
+   - .font-elite → mono / dateline / tags (JetBrains Mono)
+   - .font-ui    → explicit body sans (rarely needed) */
+.font-fell  { font-family: var(--font-fell),  "Cinzel", "Times New Roman", Georgia, serif; }
+.font-elite { font-family: var(--font-elite), "JetBrains Mono", ui-monospace, monospace; }
 .font-ui    { font-family: var(--font-ui),    -apple-system, sans-serif; }
 
-/* Subtle film grain over the whole board.
-   Single SVG noise tile, blended low. */
+/* Film grain overlay — drop into any container with class `noir-grain`
+   to get a subtle aged-off-white grain across the whole frame. */
 .noir-grain {
   position: relative;
   isolation: isolate;
@@ -42,23 +50,22 @@ body {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.7'/></svg>");
-  opacity: 0.18;
-  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.91  0 0 0 0 0.88  0 0 0 0 0.82  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.55;
+  mix-blend-mode: screen;
   z-index: 0;
 }
 .noir-grain > * { position: relative; z-index: 1; }
 
-/* Vignette */
 .noir-vignette {
   background:
     radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%),
-    linear-gradient(180deg, #0a0c12 0%, #07080d 100%);
+    linear-gradient(180deg, var(--bg-grain) 0%, var(--bg) 100%);
 }
 
 /* Cork board canvas — the real generated noir corkboard photo with a
-   subtle vignette so the deepest shadows draw the eye toward the center.
-   On narrow viewports we swap to the portrait-oriented board-mobile.png. */
+   subtle vignette. On narrow viewports we swap to the portrait
+   board-mobile.png. */
 .cork-board {
   background-color: #000;
   background-image:
@@ -78,7 +85,7 @@ body {
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
-  .glow-amber { box-shadow: 0 0 0 1px rgba(201, 162, 107, 0.4), 0 8px 22px -8px rgba(201, 162, 107, 0.35); }
-  .glow-slate { box-shadow: 0 0 0 1px rgba(92, 122, 153, 0.4), 0 8px 22px -8px rgba(92, 122, 153, 0.35); }
-  .glow-rust  { box-shadow: 0 0 0 1px rgba(164, 83, 71, 0.4),  0 8px 22px -8px rgba(164, 83, 71, 0.35);  }
+  .glow-amber { box-shadow: 0 0 0 1px rgba(201, 165, 72, 0.4),  0 8px 22px -8px rgba(201, 165, 72, 0.35); }
+  .glow-slate { box-shadow: 0 0 0 1px rgba(92, 122, 153, 0.4),  0 8px 22px -8px rgba(92, 122, 153, 0.35); }
+  .glow-rust  { box-shadow: 0 0 0 1px rgba(168, 57, 46, 0.45),  0 8px 22px -8px rgba(168, 57, 46, 0.35);  }
 }
