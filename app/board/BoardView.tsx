@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import Link from "next/link";
+import { Star } from "lucide-react";
 import {
   getState,
   pinImportant,
@@ -95,9 +96,9 @@ export default function BoardView({
           <button
             onClick={() => setShowImportant(true)}
             aria-label="Important"
-            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 flex items-center gap-2"
+            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 inline-flex items-center gap-2"
           >
-            <span className="text-xl leading-none">★</span>
+            <Star size={18} strokeWidth={1.5} className="fill-rose-300/80 text-rose-300" />
             <span className="font-elite text-base leading-none tabular-nums">{importantCount}</span>
           </button>
         </div>
@@ -163,13 +164,16 @@ function BoardCanvas({
 
   const positioned = nodes.map(n => ({ node: n, pos: resolvedPos(n) }));
   const cardScale = scaleForCount(nodes.length);
+  // Lookup map for edges — they need the *resolved* (post-drag) position
+  // of each endpoint, not the original graph default.
+  const posById = new Map(positioned.map(p => [p.node.id, p.pos]));
 
   return (
     <div
       ref={containerRef}
       className="absolute inset-0 cork-board"
     >
-      {/* SVG strings */}
+      {/* SVG strings — endpoints follow the dragged card positions */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
         preserveAspectRatio="none"
@@ -185,13 +189,13 @@ function BoardCanvas({
           </filter>
         </defs>
         {edges.map((e, i) => {
-          const a = positioned.find(p => p.node.id === e.from);
-          const b = positioned.find(p => p.node.id === e.to);
+          const a = posById.get(e.from);
+          const b = posById.get(e.to);
           if (!a || !b) return null;
           return (
             <motion.line
               key={`${e.from}->${e.to}-${i}`}
-              x1={a.pos.x} y1={a.pos.y} x2={b.pos.x} y2={b.pos.y}
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               stroke="rgba(180, 60, 50, 0.55)"
               strokeWidth={0.18}
               strokeLinecap="round"
@@ -292,7 +296,15 @@ function PinnedCard({
       onDragStart={() => setDragging(true)}
       onDragEnd={handleDragEnd}
       onClick={handleClick}
-      className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer select-none"
+      className="absolute cursor-pointer select-none"
+      // Framer-motion overwrites the CSS transform when it animates
+      // rotate/x/y, which kills the -translate-x/y-1/2 centering. Prepend
+      // the centering translate via transformTemplate so the card's
+      // center stays anchored at (pos.x%, pos.y%) — matching the SVG
+      // string endpoints.
+      transformTemplate={(_values, generated) =>
+        `translate(-50%, -50%) ${generated}`
+      }
       style={{
         left: `${pos.x}%`,
         top: `${pos.y}%`,
