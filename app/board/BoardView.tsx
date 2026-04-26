@@ -522,9 +522,153 @@ function DossierPanel({
     ? BOARD_NODES.find(n => n.kind === "location" && n.refId === clueDetail.foundAt)
     : undefined;
 
+  // Person → full-bleed portrait overlay (Blackfile PersonModal pattern).
+  // Clue → centered card on dimmed bg.
+  if (node.kind === "person") {
+    return (
+      <motion.div
+        className="fixed inset-0 z-50 overflow-hidden"
+        style={{ background: "#0a0604" }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.32, ease: [0.2, 0.7, 0.2, 1] }}
+      >
+        {/* Full-bleed portrait */}
+        <div className="absolute inset-0">
+          {heroImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={heroImage}
+              alt={node.label}
+              className="w-full h-full object-cover object-top"
+              draggable={false}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center" style={{ background: "#0a0604" }}>
+              <span className="font-fell" style={{ fontSize: 96, color: "rgba(232,225,211,0.25)" }}>{initials}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom gradient overlay for legibility */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(8,6,4,0.05) 0%, rgba(8,6,4,0) 38%, rgba(8,6,4,0.55) 58%, rgba(8,6,4,0.94) 82%, rgba(8,6,4,1) 100%)",
+          }}
+        />
+
+        {/* Square close button — top-right */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute z-[5] flex items-center justify-center"
+          style={{
+            top: 18,
+            right: 18,
+            width: 40,
+            height: 40,
+            background: "rgba(20,16,12,0.55)",
+            backdropFilter: "blur(6px)",
+            border: "1px solid rgba(232,225,211,0.18)",
+            color: "var(--fg)",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        {/* Content overlay */}
+        <div
+          className="absolute inset-x-0 bottom-0 z-[4] overflow-y-auto"
+          style={{ padding: "0 24px 110px", maxHeight: "70vh" }}
+        >
+          <div
+            className="font-elite uppercase"
+            style={{ fontSize: 10, letterSpacing: "0.4em", color: "rgba(232,225,211,0.6)", marginBottom: 8 }}
+          >
+            Person
+          </div>
+          <h1
+            className="font-fell"
+            style={{
+              fontSize: 34,
+              fontWeight: 600,
+              color: "#f4ecd8",
+              letterSpacing: "0.005em",
+              margin: 0,
+              lineHeight: 1.05,
+              textShadow: "0 2px 12px rgba(0,0,0,0.7)",
+            }}
+          >
+            {node.label}
+          </h1>
+          {node.role && (
+            <p
+              className="italic"
+              style={{
+                fontSize: 16,
+                color: "rgba(232,225,211,0.85)",
+                margin: "8px 0 0",
+                lineHeight: 1.4,
+              }}
+            >
+              {node.role}
+            </p>
+          )}
+
+          <div
+            className="font-elite uppercase"
+            style={{
+              marginTop: 22,
+              fontSize: 9.5,
+              letterSpacing: "0.4em",
+              color: "rgba(232,225,211,0.5)",
+            }}
+          >
+            What we know
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <DossierKnown
+              connectedClues={connectedClues}
+              npcReveals={npcReveals}
+              evidenceById={evidenceById}
+            />
+          </div>
+
+          {node.href && (
+            <Link
+              href={node.href}
+              onClick={onClose}
+              className="font-elite uppercase inline-flex items-center"
+              style={{
+                marginTop: 22,
+                padding: "14px 18px",
+                background: "transparent",
+                border: "1px solid rgba(232,225,211,0.45)",
+                color: "var(--fg)",
+                fontSize: 11,
+                letterSpacing: "0.32em",
+                gap: 10,
+              }}
+            >
+              Open Interview
+              <span style={{ display: "inline-block", transform: "translateY(-1px)" }}>→</span>
+            </Link>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Clue → text-card modal (covered separately by EvidenceDetail style).
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
+      className="fixed inset-0 z-50 overflow-y-auto"
+      style={{ background: "var(--bg)" }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
       {/* Close button */}
@@ -532,34 +676,23 @@ function DossierPanel({
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="fixed top-5 right-5 z-50 w-10 h-10 rounded-full bg-black/70 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-300 hover:text-white flex items-center justify-center text-lg leading-none"
+        className="fixed z-50 flex items-center justify-center"
+        style={{
+          top: 18, right: 18, width: 38, height: 38,
+          background: "transparent",
+          border: "1px solid rgba(232,225,211,0.25)",
+          color: "rgba(232,225,211,0.85)",
+        }}
       >
-        ×
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
       </button>
-
-      {/* Hero image (people / locations with image).
-          object-top so the head doesn't get cut off — bottom can clip. */}
-      {heroImage ? (
-        <div className="relative w-full h-[50vh] sm:h-[60vh] noir-vignette">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={heroImage}
-            alt={node.label}
-            className={`w-full h-full ${node.kind === "person" ? "object-top object-cover" : "object-cover"}`}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black" />
-        </div>
-      ) : node.kind === "person" ? (
-        <div className="relative w-full h-[50vh] sm:h-[60vh] noir-vignette flex items-center justify-center bg-[#0a0a14]">
-          <span className="font-fell text-7xl text-slate-500">{initials}</span>
-        </div>
-      ) : null}
 
       {/* Body */}
       <motion.div
-        className={`max-w-2xl mx-auto px-6 py-8 space-y-6 relative ${
-          heroImage || node.kind === "person" ? "-mt-16" : "pt-24"
-        }`}
+        className="max-w-2xl mx-auto"
+        style={{ padding: "110px 22px 110px" }}
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -568,39 +701,39 @@ function DossierPanel({
           <p className={`font-elite text-[10px] uppercase tracking-[0.3em] ${KIND_ACCENT[node.kind]}`}>
             {KIND_TAG[node.kind]}
           </p>
-          <h2 className="font-fell text-4xl sm:text-5xl text-neutral-50 mt-2 leading-tight">
+          <h2
+            className="font-fell"
+            style={{ fontSize: 30, fontWeight: 600, letterSpacing: "0.01em", margin: "10px 0 0", lineHeight: 1.1, color: "var(--fg)" }}
+          >
             {node.label}
           </h2>
-          {node.role && (
-            <p className="italic text-base text-neutral-400 mt-1">{node.role}</p>
-          )}
+          <div style={{ width: 22, height: 1, background: "var(--accent)", marginTop: 16 }} />
         </div>
 
         {isClue && clueDetail?.significance && (
-          <p className="text-base text-neutral-200 leading-relaxed">
+          <p
+            style={{
+              marginTop: 18,
+              fontSize: 15.5,
+              lineHeight: 1.55,
+              color: "rgba(232,225,211,0.88)",
+            }}
+          >
             {clueDetail.significance}
           </p>
         )}
 
-        {node.kind === "person" && (
-          <DossierKnown
-            connectedClues={connectedClues}
-            npcReveals={npcReveals}
-            evidenceById={evidenceById}
-          />
-        )}
-
         {isClue && (connectedPeople.length > 0 || connectedLocations.length > 0 || foundAtLoc) && (
-          <div className="space-y-4">
-            {connectedPeople.length > 0 && (
-              <RelatedRow title="Connected to" nodes={connectedPeople} onItem={onClose} />
-            )}
+          <div className="space-y-4" style={{ marginTop: 32 }}>
             {(foundAtLoc || connectedLocations.length > 0) && (
               <RelatedRow
                 title="Found at"
                 nodes={foundAtLoc ? [foundAtLoc, ...connectedLocations.filter(l => l.id !== foundAtLoc.id)] : connectedLocations}
                 onItem={onClose}
               />
+            )}
+            {connectedPeople.length > 0 && (
+              <RelatedRow title="Connections" nodes={connectedPeople} onItem={onClose} />
             )}
           </div>
         )}
@@ -609,10 +742,21 @@ function DossierPanel({
           {node.href && (
             <Link
               href={node.href}
-              className="font-elite text-[11px] uppercase tracking-wider rounded bg-neutral-100 text-neutral-900 px-4 py-2 hover:bg-white"
+              className="font-elite uppercase inline-flex items-center"
+              style={{
+                marginTop: 22,
+                padding: "14px 18px",
+                background: "transparent",
+                border: "1px solid rgba(232,225,211,0.45)",
+                color: "var(--fg)",
+                fontSize: 11,
+                letterSpacing: "0.32em",
+                gap: 10,
+              }}
               onClick={onClose}
             >
-              {node.kind === "person" ? "Open interview →" : "Visit location →"}
+              {node.kind === "person" ? "Open Interview" : "Visit Location"}
+              <span style={{ display: "inline-block", transform: "translateY(-1px)" }}>→</span>
             </Link>
           )}
           {isClue && node.refId && (
@@ -621,13 +765,21 @@ function DossierPanel({
                 if (isPinned) unpinImportant(node.refId!);
                 else pinImportant(node.refId!);
               }}
-              className={`font-elite text-[11px] uppercase tracking-wider rounded px-4 py-2 ring-1 transition ${
-                isPinned
-                  ? "bg-[var(--accent)]/40 ring-[var(--accent)]/60 text-[var(--fg)]"
-                  : "ring-neutral-700 hover:bg-neutral-800 text-neutral-300"
-              }`}
+              className="font-elite uppercase inline-flex items-center"
+              style={{
+                marginTop: 22,
+                marginLeft: 12,
+                padding: "14px 18px",
+                background: "transparent",
+                border: `1px solid ${isPinned ? "var(--accent)" : "rgba(232,225,211,0.25)"}`,
+                color: isPinned ? "var(--accent)" : "rgba(232,225,211,0.7)",
+                fontSize: 11,
+                letterSpacing: "0.32em",
+                gap: 10,
+              }}
             >
-              {isPinned ? "★ pinned" : "☆ pin important"}
+              <Star size={14} strokeWidth={1.4} className={isPinned ? "fill-current" : ""} />
+              <span>{isPinned ? "Starred" : "Star"}</span>
             </button>
           )}
         </div>
