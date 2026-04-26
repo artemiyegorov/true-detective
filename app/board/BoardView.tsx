@@ -96,10 +96,12 @@ export default function BoardView({
           <button
             onClick={() => setShowImportant(true)}
             aria-label="Important"
-            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 inline-flex items-center gap-2"
+            className="rounded-full ring-1 ring-rose-800/60 px-3 py-1.5 text-rose-200 hover:bg-rose-950/40 inline-flex items-center gap-2 h-9"
           >
-            <Star size={18} strokeWidth={1.5} className="fill-rose-300/80 text-rose-300" />
-            <span className="font-elite text-base leading-none tabular-nums">{importantCount}</span>
+            <Star size={18} strokeWidth={1.5} className="block fill-rose-300/80 text-rose-300" />
+            <span className="font-elite text-base tabular-nums leading-[18px] block">
+              {importantCount}
+            </span>
           </button>
         </div>
       </header>
@@ -227,12 +229,12 @@ function BoardCanvas({
 }
 
 // Card scale shrinks as the wall fills up so things still fit on
-// mobile. 4-6 cards stay full size; from there each extra card trims
-// ~3% off, capped at 55%.
+// mobile. Up to 6 cards stay full size; from 7-10 we trim 3% per
+// card; past 10 we trim a steeper 5% per card down to a 50% floor.
 function scaleForCount(count: number): number {
   if (count <= 6) return 1;
-  const s = 1 - (count - 6) * 0.03;
-  return Math.max(0.55, s);
+  if (count <= 10) return 1 - (count - 6) * 0.03; // 0.88 at 10
+  return Math.max(0.5, 0.88 - (count - 10) * 0.05);
 }
 
 // Stable per-node tilt so pinned cards look hand-placed, not aligned.

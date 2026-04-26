@@ -83,7 +83,7 @@ export default function CasebookView({
             onClick={() => setFilter(filter === "important" ? "all" : "important")}
             aria-pressed={filter === "important"}
             aria-label="Filter important"
-            className={`rounded-full ring-1 px-3 py-1.5 inline-flex items-center gap-2 transition ${
+            className={`rounded-full ring-1 px-3 py-1.5 inline-flex items-center gap-2 h-9 transition ${
               filter === "important"
                 ? "bg-rose-500/90 ring-rose-300 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
                 : "ring-rose-800/60 text-rose-200 hover:bg-rose-950/40"
@@ -92,9 +92,9 @@ export default function CasebookView({
             <Star
               size={18}
               strokeWidth={1.5}
-              className={filter === "important" ? "fill-white text-white" : "fill-rose-300/80 text-rose-300"}
+              className={`block ${filter === "important" ? "fill-white text-white" : "fill-rose-300/80 text-rose-300"}`}
             />
-            <span className="font-elite text-base leading-none tabular-nums">
+            <span className="font-elite text-base tabular-nums leading-[18px] block">
               {state.importantClues.length}
             </span>
           </button>
