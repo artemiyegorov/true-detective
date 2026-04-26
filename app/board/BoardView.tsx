@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import {
   getState,
@@ -39,9 +40,20 @@ export default function BoardView({
   factsById: Record<string, string>;
   caseTitle: string;
 }) {
+  const router = useRouter();
   const [state, setState] = useState<PlayerState | null>(null);
   const [openNode, setOpenNode] = useState<BoardNode | null>(null);
   const [showImportant, setShowImportant] = useState(false);
+
+  // Locations skip the dossier — clicking a location card on the board
+  // takes the player straight into the scene.
+  function handleNodeClick(node: BoardNode) {
+    if (node.kind === "location" && node.href) {
+      router.push(node.href);
+      return;
+    }
+    setOpenNode(node);
+  }
 
   useEffect(() => {
     setState(getState());
@@ -112,7 +124,7 @@ export default function BoardView({
           nodes={data.nodes}
           edges={data.edges}
           state={state}
-          onNodeClick={setOpenNode}
+          onNodeClick={handleNodeClick}
         />
       </div>
 
