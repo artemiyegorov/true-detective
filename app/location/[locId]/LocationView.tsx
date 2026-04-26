@@ -17,6 +17,7 @@ import {
 import { BOARD_EDGES, BOARD_NODES, visibleNodes, type BoardNode } from "@/lib/board-graph";
 import { sceneFor } from "@/lib/scene-content";
 import Tabs from "../../Tabs";
+import RelatedPolaroid from "../../RelatedPolaroid";
 
 type Hotspot = {
   id: string;
@@ -203,7 +204,7 @@ export default function LocationView({
         {peopleNodes.length > 0 && (
           <Section title="People connected here">
             <div className="flex flex-wrap gap-3">
-              {peopleNodes.map(p => <PersonCard key={p.id} node={p} />)}
+              {peopleNodes.map(p => <RelatedPolaroid key={p.id} node={p} />)}
             </div>
           </Section>
         )}
@@ -248,7 +249,7 @@ export default function LocationView({
         {locationNodes.length > 0 && (
           <Section title="Adjacent">
             <div className="flex flex-wrap gap-3">
-              {locationNodes.map(l => <LocationCard key={l.id} node={l} />)}
+              {locationNodes.map(l => <RelatedPolaroid key={l.id} node={l} />)}
             </div>
           </Section>
         )}
@@ -326,49 +327,6 @@ function ObjectButton({
   );
 }
 
-function PersonCard({ node }: { node: BoardNode }) {
-  return (
-    <Link
-      href={node.href ?? "#"}
-      className="flex items-center gap-3 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition min-w-[180px]"
-    >
-      {node.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={node.image} alt={node.label} className="w-10 h-12 object-cover rounded-sm" />
-      ) : (
-        <span className="w-10 h-12 rounded-sm bg-neutral-800 flex items-center justify-center font-elite text-xs text-neutral-500">
-          {(node.label.split(/\s+/).map(p => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
-        </span>
-      )}
-      <div>
-        <p className="font-fell text-sm text-neutral-100 leading-tight">{node.label}</p>
-        <p className="font-elite text-[9px] uppercase tracking-wider text-neutral-500 mt-0.5">talk →</p>
-      </div>
-    </Link>
-  );
-}
-
-function LocationCard({ node }: { node: BoardNode }) {
-  return (
-    <Link
-      href={node.href ?? "#"}
-      className="flex items-center gap-3 rounded-md bg-[#15161f] ring-1 ring-neutral-800 hover:bg-[#1a1c25] hover:ring-neutral-600 px-3 py-2 transition min-w-[180px]"
-    >
-      {node.image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={node.image} alt={node.label} className="w-12 h-12 object-cover rounded-sm" />
-      ) : (
-        <span className="w-12 h-12 rounded-sm bg-amber-950/40 ring-1 ring-amber-700/40 flex items-center justify-center text-amber-300">
-          📍
-        </span>
-      )}
-      <div>
-        <p className="font-fell text-sm text-neutral-100 leading-tight">{node.label}</p>
-        <p className="font-elite text-[9px] uppercase tracking-wider text-neutral-500 mt-0.5">enter →</p>
-      </div>
-    </Link>
-  );
-}
 
 function RevealModal({
   reveal,
