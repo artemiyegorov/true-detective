@@ -1,17 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Star } from "lucide-react";
 import {
+  discoverEvidence,
+  getLabResult,
   getState,
   pinImportant,
+  recordLabAttempt,
   unpinImportant,
   type PlayerState,
 } from "@/lib/player-state";
-import { BOARD_EDGES, BOARD_NODES, type BoardNode } from "@/lib/board-graph";
+import { BOARD_EDGES, BOARD_NODES, visibleNodes, type BoardNode } from "@/lib/board-graph";
 import RelatedPolaroid from "../RelatedPolaroid";
+import { BackLink } from "../BackLink";
+
+export type LabTestSpec = {
+  id: string;
+  label: string;
+  kind: "match_npc";
+  matches: Record<string, { evidence_id: string; result_text: string }>;
+  no_match_text: string;
+};
 
 export type ClueDetail = {
   id: string;
@@ -19,6 +30,7 @@ export type ClueDetail = {
   significance: string;
   foundAt?: string;
   image?: string;
+  labTests?: LabTestSpec[];
 };
 
 type ClueRow =
@@ -27,8 +39,6 @@ type ClueRow =
 
 export default function CasebookView({
   evidenceById,
-  factsById,
-  caseTitle,
 }: {
   evidenceById: Record<string, ClueDetail>;
   factsById: Record<string, string>;
@@ -72,18 +82,9 @@ export default function CasebookView({
 
   return (
     <div className="relative min-h-screen noir-grain" style={{ background: "var(--bg)", color: "var(--fg)" }}>
-      {/* Top back link */}
-      <div className="absolute top-0 inset-x-0 h-14 z-10 flex items-end" style={{ padding: "0 18px 8px" }}>
-        <Link
-          href="/"
-          className="font-elite uppercase"
-          style={{ fontSize: 10, letterSpacing: "0.32em", color: "var(--fg)", padding: 4 }}
-        >
-          ← cases
-        </Link>
-      </div>
+      {!openItem && <BackLink href="/" label="cases" />}
 
-      <div className="relative z-[2]" style={{ padding: "74px 18px 110px" }}>
+      <div className="relative z-[2]" style={{ padding: "74px 18px 140px" }}>
         <div
           className="font-elite uppercase"
           style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.45)" }}
@@ -174,7 +175,6 @@ export default function CasebookView({
         {openItem && (
           <ClueModal
             row={openItem}
-            evidenceById={evidenceById}
             isPinned={state.importantClues.includes(openItem.id)}
             onClose={() => setOpenItem(null)}
           />
@@ -280,12 +280,10 @@ function CasebookRowItem({
 
 function ClueModal({
   row,
-  evidenceById,
   isPinned,
   onClose,
 }: {
   row: ClueRow;
-  evidenceById: Record<string, ClueDetail>;
   isPinned: boolean;
   onClose: () => void;
 }) {
@@ -319,13 +317,25 @@ function ClueModal({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 overflow-y-auto noir-grain"
-      style={{ background: "var(--bg)" }}
+      className="td-modal-backdrop fixed inset-0 z-50 overflow-y-auto sm:flex sm:items-start sm:justify-center sm:py-10"
+      style={{
+        background: "var(--bg)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
     >
-      {/* Top action row: breadcrumb left, star + close (38×38 squares) right */}
+      {/* Sheet — full-bleed on mobile, centered max-w-2xl card on desktop. */}
       <div
-        className="fixed inset-x-0 z-50 flex justify-between items-center"
+        className="relative noir-grain w-full sm:max-w-2xl sm:rounded-sm sm:border sm:border-[rgba(232,225,211,0.14)] sm:overflow-hidden sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
+        style={{ background: "var(--bg)" }}
+        onClick={e => e.stopPropagation()}
+      >
+      {/* Top action row: breadcrumb left, star + close (38×38 squares) right.
+          Absolute (not fixed) so it anchors to the sheet on desktop too. */}
+      <div
+        className="absolute inset-x-0 z-[2] flex justify-between items-center"
         style={{ top: 0, padding: "20px 18px 0" }}
       >
         <div
@@ -388,7 +398,7 @@ function ClueModal({
 
       <motion.div
         className="max-w-2xl mx-auto relative"
-        style={{ padding: "110px 22px 60px" }}
+        style={{ padding: detail?.image ? "26px 22px 60px" : "110px 22px 60px" }}
         initial={{ y: 16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -397,8 +407,7 @@ function ClueModal({
           className="font-elite uppercase"
           style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.45)" }}
         >
-          {isEvidence ? "Physical · " : "Note · "}
-          <span style={{ color: "rgba(232,225,211,0.4)" }}>#{row.id.replace(/^ev_|^fact_/, "").toUpperCase()}</span>
+          {isEvidence ? "Physical evidence" : "Note"}
         </div>
 
         <h1
@@ -431,6 +440,12 @@ function ClueModal({
           </p>
         )}
 
+        {isEvidence && detail?.labTests && detail.labTests.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <LabSection evidenceId={detail.id} tests={detail.labTests} />
+          </div>
+        )}
+
         {locationsToShow.length > 0 && (
           <div style={{ marginTop: 32 }}>
             <RelatedCards title="Found at" nodes={locationsToShow} onItem={onClose} />
@@ -443,6 +458,7 @@ function ClueModal({
         )}
 
       </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -463,6 +479,224 @@ function RelatedCards({
       </p>
       <div className="flex flex-wrap gap-3">
         {nodes.map(n => <RelatedPolaroid key={n.id} node={n} onClick={onItem} />)}
+      </div>
+    </div>
+  );
+}
+
+// === Forensic lab section ===
+//
+// Per evidence card, shows the available lab tests (DNA comparison, footwear
+// pattern match, etc). Each test exposes a picker of currently-visible
+// suspects; the player submits one and the lab returns either a match
+// (which discoverEvidence's the resulting match-record) or a "no match"
+// with that suspect crossed off the list.
+
+function LabSection({
+  evidenceId,
+  tests,
+}: {
+  evidenceId: string;
+  tests: LabTestSpec[];
+}) {
+  const [state, setState] = useState<PlayerState | null>(null);
+  // Per-test pending state — short visual delay before the lab "returns".
+  const [pendingTests, setPendingTests] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    setState(getState());
+    const handler = () => setState(getState());
+    window.addEventListener("td-state-change", handler);
+    return () => window.removeEventListener("td-state-change", handler);
+  }, []);
+
+  if (!state) return null;
+
+  const visiblePeople = visibleNodes(state).filter(n => n.kind === "person" && n.refId);
+
+  return (
+    <div>
+      <p
+        className="font-elite uppercase mb-3"
+        style={{ fontSize: 10, letterSpacing: "0.32em", color: "rgba(232,225,211,0.5)" }}
+      >
+        Forensic lab
+      </p>
+      <div className="flex flex-col" style={{ gap: 16 }}>
+        {tests.map(test => {
+          const scopedId = `${evidenceId}:${test.id}`;
+          const result = getLabResult(scopedId);
+          const pendingNpc = pendingTests[scopedId] ?? null;
+          // Tests can have MULTIPLE possible matches (e.g. two unknown
+          // DNA profiles on the same handle, one Tom + one Daniel). The
+          // picker stays open until either every defined match has been
+          // confirmed or every visible suspect has been tried.
+          const totalPossibleMatches = Object.keys(test.matches).length;
+          const allMatchesFound = result.matchedNpcs.length >= totalPossibleMatches;
+          const eligible = visiblePeople.filter(n => !result.triedNpcs.includes(n.refId!));
+          const matchedNodes = result.matchedNpcs
+            .map(refId => ({
+              refId,
+              node: BOARD_NODES.find(n => n.kind === "person" && n.refId === refId),
+              text: test.matches[refId]?.result_text ?? "",
+            }))
+            .filter(m => !!m.node) as Array<{ refId: string; node: BoardNode; text: string }>;
+
+          async function submit(npcRefId: string) {
+            setPendingTests(p => ({ ...p, [scopedId]: npcRefId }));
+            // Tiny artificial delay so the lab feels like a real request,
+            // not an instant unlock.
+            await new Promise(r => setTimeout(r, 1000));
+            const match = test.matches[npcRefId];
+            recordLabAttempt(scopedId, npcRefId, !!match);
+            if (match) discoverEvidence(match.evidence_id);
+            setPendingTests(p => ({ ...p, [scopedId]: null }));
+          }
+
+          return (
+            <div
+              key={test.id}
+              style={{
+                border: "1px solid rgba(232,225,211,0.12)",
+                padding: "14px 14px 12px",
+                background: "rgba(232,225,211,0.03)",
+              }}
+            >
+              <div
+                className="font-fell"
+                style={{ fontSize: 14, color: "var(--fg)", lineHeight: 1.3 }}
+              >
+                {test.label}
+              </div>
+
+              {totalPossibleMatches > 1 && !allMatchesFound && (
+                <div
+                  className="font-elite uppercase"
+                  style={{
+                    marginTop: 8,
+                    fontSize: 9,
+                    letterSpacing: "0.28em",
+                    color: "rgba(232,225,211,0.5)",
+                  }}
+                >
+                  {result.matchedNpcs.length} / {totalPossibleMatches} unknown profiles identified
+                </div>
+              )}
+
+              {matchedNodes.length > 0 && (
+                <div className="flex flex-col" style={{ marginTop: 10, gap: 6 }}>
+                  {matchedNodes.map(({ refId, node, text }) => (
+                    <div
+                      key={refId}
+                      className="font-elite uppercase"
+                      style={{ fontSize: 10, letterSpacing: "0.24em", color: "var(--accent)" }}
+                    >
+                      ✓ Match: {node.label} —{" "}
+                      <span style={{ textTransform: "none", letterSpacing: "0.01em", color: "rgba(232,225,211,0.85)" }}>
+                        {text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {result.triedNpcs.length > 0 && (
+                <div className="flex flex-wrap" style={{ gap: 6, marginTop: 10 }}>
+                  {result.triedNpcs.map(refId => {
+                    const node = BOARD_NODES.find(n => n.kind === "person" && n.refId === refId);
+                    if (!node) return null;
+                    const isMatch = result.matchedNpcs.includes(refId);
+                    return (
+                      <span
+                        key={refId}
+                        className="font-elite uppercase"
+                        style={{
+                          fontSize: 9,
+                          letterSpacing: "0.22em",
+                          padding: "4px 8px",
+                          border: `1px solid ${isMatch ? "rgba(168,57,46,0.6)" : "rgba(232,225,211,0.18)"}`,
+                          color: isMatch ? "var(--accent)" : "rgba(232,225,211,0.45)",
+                          textDecoration: isMatch ? "none" : "line-through",
+                        }}
+                      >
+                        {node.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!allMatchesFound && eligible.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <p
+                    className="font-elite uppercase"
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.28em",
+                      color: "rgba(232,225,211,0.45)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {pendingNpc
+                      ? "Lab is running…"
+                      : matchedNodes.length > 0
+                      ? "Compare another suspect:"
+                      : "Compare against:"}
+                  </p>
+                  <div className="flex flex-wrap" style={{ gap: 6 }}>
+                    {eligible.map(n => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        disabled={!!pendingNpc}
+                        onClick={() => submit(n.refId!)}
+                        className="font-elite uppercase"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: "0.24em",
+                          padding: "6px 10px",
+                          border: `1px solid ${pendingNpc === n.refId ? "var(--accent)" : "rgba(232,225,211,0.35)"}`,
+                          background: pendingNpc === n.refId ? "rgba(168,57,46,0.18)" : "transparent",
+                          color: pendingNpc ? "rgba(232,225,211,0.5)" : "var(--fg)",
+                          cursor: pendingNpc ? "default" : "pointer",
+                        }}
+                      >
+                        {n.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!allMatchesFound && eligible.length === 0 && matchedNodes.length === 0 && (
+                <p
+                  className="italic"
+                  style={{
+                    fontSize: 13,
+                    color: "rgba(232,225,211,0.4)",
+                    marginTop: 10,
+                  }}
+                >
+                  No suspects available to test against yet — the board needs more leads.
+                </p>
+              )}
+
+              {allMatchesFound && (
+                <p
+                  className="font-elite uppercase"
+                  style={{
+                    marginTop: 10,
+                    fontSize: 9,
+                    letterSpacing: "0.32em",
+                    color: "rgba(127,178,124,0.85)",
+                  }}
+                >
+                  ✓ All unknown profiles identified
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,10 +1,36 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
 import { portraitVariantFor, portraitPath } from "@/lib/portrait";
 import type { NpcId } from "@/lib/npc";
-import { meetNpc, recordNpcReveal, unlockLocation } from "@/lib/player-state";
+import {
+  discoverEvidence,
+  getChatHistory,
+  getState,
+  meetNpc,
+  recordNpcReveal,
+  saveChatHistory,
+  unlockLocation,
+} from "@/lib/player-state";
+
+// Evidence the detective can physically present in an interview. Things
+// that read as "facts the detective should ask about" (phone calls,
+// witness statements, divorce filings, affair rumours) are excluded —
+// those should come up in dialogue, not as a paperclip. Lab/police-
+// procedure unlocks like ev_dna_match_tom are presentable because the
+// detective hands the report to the suspect.
+const PRESENTABLE_EVIDENCE: ReadonlySet<string> = new Set([
+  "ev_footprint_44",
+  "ev_partial_footprint_size_11",
+  "ev_margaret_note",
+  "ev_bar_receipt",
+  "ev_bank_statements",
+  "ev_tom_old_key",
+  "ev_security_camera_glimpse",
+  "ev_dna_match_tom",
+  "ev_dna_match_daniel",
+  "ev_paperweight_recovered",
+]);
 
 type Msg = {
   role: "user" | "assistant";
@@ -46,10 +72,14 @@ export default function Chat({
   npcId,
   npcName,
   evidenceList,
+  relevantEvidenceIds,
 }: {
   npcId: NpcId;
   npcName: string;
   evidenceList: Array<{ id: string; name: string }>;
+  /** evidence IDs that narratively apply to THIS NPC — picker is scoped
+      to this set so other suspects' clues don't leak in. */
+  relevantEvidenceIds: string[];
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -58,20 +88,96 @@ export default function Chat({
   const [evidencePresented, setEvidencePresented] = useState<string[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
   const [unlockToast, setUnlockToast] = useState<string | null>(null);
-  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  // Per design, the default view is chat-mode: transcript visible and the
+  // portrait sits in a compact band on top. The player can collapse the
+  // transcript to swap into voice-first / full-bleed-portrait mode.
+  const [transcriptOpen, setTranscriptOpen] = useState(true);
+  // Mute is a UI preference (not a case-state thing), so it lives in
+  // localStorage and persists across NPCs / navigations / Reset.
   const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setMuted(window.localStorage.getItem("td.chat.muted") === "1");
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("td.chat.muted", muted ? "1" : "0");
+  }, [muted]);
   const [npcSpeaking, setNpcSpeaking] = useState(false);
   const [typed, setTyped] = useState("");
   const [holding, setHolding] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [discoveredIds, setDiscoveredIds] = useState<string[]>([]);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  // We track transcribing state via setTranscribing (no read needed yet —
+  // the spinner UX is gated elsewhere via liveTranscript text).
+  const [, setTranscribing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const liveCaptionRef = useRef<HTMLParagraphElement | null>(null);
   const recognitionRef = useRef<unknown>(null);
-
-  // Track "I've met them" once.
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  // Detected once on mount: does this browser ship Web Speech API?
+  // Falls back to MediaRecorder + /api/stt (ElevenLabs Scribe) if not.
+  const useWebSpeechRef = useRef(false);
   useEffect(() => {
-    meetNpc(npcId);
+    if (typeof window === "undefined") return;
+    const SR = (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).SpeechRecognition
+      || (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
+    useWebSpeechRef.current = !!SR;
+  }, []);
+
+  // Watch player-state for discovered evidence — re-renders when the
+  // player picks up new evidence elsewhere.
+  useEffect(() => {
+    const sync = () => setDiscoveredIds(getState().discoveredEvidence);
+    sync();
+    window.addEventListener("td-state-change", sync);
+    return () => window.removeEventListener("td-state-change", sync);
+  }, []);
+
+  // Filtered evidence list for the paperclip picker:
+  //   1) the player has actually discovered it
+  //   2) it's something the detective can *physically* present
+  //   3) it's narratively relevant to THIS NPC (no Tom-only clues offered
+  //      while interrogating Daniel, etc.)
+  // Already-presented items stay in the list but get dimmed/disabled.
+  const relevantSet = new Set(relevantEvidenceIds);
+  const presentableEvidence = evidenceList.filter(
+    e =>
+      discoveredIds.includes(e.id) &&
+      PRESENTABLE_EVIDENCE.has(e.id) &&
+      relevantSet.has(e.id),
+  );
+
+  // Note: we DO NOT call meetNpc here on mount. Just opening the chat
+  // page should not unlock anything tied to this NPC — locks fire when
+  // the NPC actually says something in dialogue (state.revealed_info
+  // markers handled below). meetNpc fires on the first reply instead.
+
+  // Hydrate the transcript from persisted state on mount. We track
+  // hydration with a ref so the autosave effect below doesn't immediately
+  // clobber prior history with the empty initial messages array.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    const prior = getChatHistory(npcId) as Msg[];
+    if (prior.length) {
+      setMessages(prior);
+      // Restore mood from the most recent assistant turn so the portrait
+      // variant matches where we left off.
+      const lastAssistant = [...prior].reverse().find(m => m.role === "assistant");
+      if (lastAssistant?.mood) setMood(lastAssistant.mood);
+    }
+    hydratedRef.current = true;
   }, [npcId]);
+
+  // Autosave the transcript whenever it changes — survives navigation,
+  // cleared by resetPlayerState (Reset button on /board).
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    saveChatHistory(npcId, messages);
+  }, [npcId, messages]);
 
   // Auto-scroll transcript to the bottom on new messages while open.
   useEffect(() => {
@@ -103,6 +209,16 @@ export default function Chat({
     }, 32);
     return () => clearInterval(id);
   }, [lastNpc?.content]);
+
+  // Live caption auto-scroll: as the typewriter advances, keep the
+  // bottom-most line visible so long replies marquee upward instead of
+  // truncating with `…`. Only matters in collapsed mode where the band
+  // has bounded height.
+  useEffect(() => {
+    const el = liveCaptionRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [typed]);
 
   // Re-mute or fully stop audio when toggled on.
   useEffect(() => {
@@ -175,8 +291,19 @@ export default function Chat({
         setTimeout(() => setUnlockToast(null), 4000);
       }
 
+      // Evidence the NPC produced in dialogue (e.g. Kevin pulling Sarah's
+      // bar receipt). Added to discoveredEvidence so it shows up in the
+      // casebook + fires a notification toast.
+      const evUnlocks = (dialogue.unlocked_evidence as string[] | undefined) ?? [];
+      for (const id of evUnlocks) discoverEvidence(id);
+
       const revealed = (dialogue.state?.revealed_info as string[] | undefined) ?? [];
       if (revealed.length) recordNpcReveal(npcId, revealed);
+
+      // Mark "met" only after a real exchange — not on chat-page mount.
+      // This way, opening Sarah's chat without saying anything doesn't
+      // count as meeting her. The first NPC reply is the threshold.
+      meetNpc(npcId);
 
       // TTS — skip the call entirely when the user has muted audio.
       // Saves an ElevenLabs request per turn while muted.
@@ -207,58 +334,148 @@ export default function Chat({
     }
   }, [evidencePresented, messages, mood, npcId, muted]);
 
-  // === Hold-to-speak — Web Speech API ===
+  // === Hold-to-speak ===
+  // Two backends:
+  //   • Web Speech API (Chrome/Safari) — instant, free, on-device.
+  //   • MediaRecorder → /api/stt (ElevenLabs Scribe) for Firefox / others.
+  //
+  // The picker is a feature-detect on mount (`useWebSpeechRef`).
   const startListening = useCallback(() => {
     if (typeof window === "undefined") return;
-    const SR = (window as unknown as {
-      SpeechRecognition?: new () => unknown;
-      webkitSpeechRecognition?: new () => unknown;
-    }).SpeechRecognition || (window as unknown as {
-      webkitSpeechRecognition?: new () => unknown;
-    }).webkitSpeechRecognition;
-    if (!SR) return; // browser doesn't support — UX falls back to keyboard
-
+    setVoiceError(null);
     setLiveTranscript("");
     setNpcSpeaking(false);
     if (audioRef.current) audioRef.current.pause();
 
-    const recognition = new (SR as new () => {
-      lang: string; continuous: boolean; interimResults: boolean;
-      onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
-      onerror: (e: unknown) => void;
-      onend: () => void;
-      start: () => void; stop: () => void;
-    })();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.onresult = e => {
-      let combined = "";
-      for (let i = 0; i < e.results.length; i++) {
-        combined += e.results[i][0].transcript;
+    if (useWebSpeechRef.current) {
+      const SR = (window as unknown as {
+        SpeechRecognition?: new () => unknown;
+        webkitSpeechRecognition?: new () => unknown;
+      }).SpeechRecognition || (window as unknown as {
+        webkitSpeechRecognition?: new () => unknown;
+      }).webkitSpeechRecognition;
+      if (!SR) return;
+      const recognition = new (SR as new () => {
+        lang: string; continuous: boolean; interimResults: boolean;
+        onresult: (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
+        onerror: (e: { error?: string; message?: string }) => void;
+        onend: () => void;
+        start: () => void; stop: () => void;
+      })();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.onresult = e => {
+        let combined = "";
+        for (let i = 0; i < e.results.length; i++) {
+          combined += e.results[i][0].transcript;
+        }
+        setLiveTranscript(combined);
+      };
+      recognition.onerror = e => {
+        const code = e?.error ?? "unknown";
+        if (code === "no-speech") return;
+        const msg =
+          code === "not-allowed" || code === "service-not-allowed"
+            ? "Mic permission denied. Allow microphone access for voice input."
+            : code === "audio-capture"
+            ? "No microphone detected."
+            : `Voice error: ${code}`;
+        setVoiceError(msg);
+        // eslint-disable-next-line no-console
+        console.warn("[chat/voice]", code, e?.message);
+      };
+      recognition.onend = () => { /* handled in stopListening */ };
+      try {
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[chat/voice] start failed", err);
       }
-      setLiveTranscript(combined);
-    };
-    recognition.onerror = () => { /* ignore */ };
-    recognition.onend = () => { /* handled in stopListening */ };
-    try {
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch {
-      /* already started — ignore */
+      return;
     }
+
+    // MediaRecorder fallback path (Firefox & friends).
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Pick a mime that the browser will actually produce. Firefox emits
+        // audio/ogg; Chrome emits audio/webm. We let MediaRecorder choose.
+        const mr = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+        mr.ondataavailable = e => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        mr.start();
+        mediaRecorderRef.current = mr;
+      } catch (err) {
+        const e = err as Error;
+        const msg = /denied|not allowed/i.test(e?.message ?? "")
+          ? "Mic permission denied. Allow microphone access for voice input."
+          : /not found|no devices/i.test(e?.message ?? "")
+          ? "No microphone detected."
+          : `Voice error: ${e?.message ?? "unknown"}`;
+        setVoiceError(msg);
+        // eslint-disable-next-line no-console
+        console.warn("[chat/voice] mr start failed", err);
+      }
+    })();
   }, []);
 
   const stopListening = useCallback(() => {
-    const rec = recognitionRef.current as { stop?: () => void } | null;
-    if (rec?.stop) rec.stop();
-    recognitionRef.current = null;
-    // Snapshot transcript and send.
-    setLiveTranscript(t => {
-      const trimmed = t.trim();
-      if (trimmed) send(trimmed);
-      return t;
-    });
+    if (useWebSpeechRef.current) {
+      const rec = recognitionRef.current as { stop?: () => void } | null;
+      if (rec?.stop) rec.stop();
+      recognitionRef.current = null;
+      setLiveTranscript(t => {
+        const trimmed = t.trim();
+        if (trimmed) send(trimmed);
+        return t;
+      });
+      return;
+    }
+
+    // MediaRecorder fallback: stop, bundle chunks, ship to /api/stt.
+    const mr = mediaRecorderRef.current;
+    if (!mr) return;
+    mediaRecorderRef.current = null;
+    mr.onstop = async () => {
+      mr.stream.getTracks().forEach(t => t.stop());
+      const chunks = audioChunksRef.current;
+      audioChunksRef.current = [];
+      if (!chunks.length) return;
+      const blob = new Blob(chunks, { type: chunks[0].type || "audio/webm" });
+      if (blob.size < 800) return;
+      setTranscribing(true);
+      setLiveTranscript("Transcribing…");
+      try {
+        const fd = new FormData();
+        fd.append("audio", blob, "speech.webm");
+        const res = await fetch("/api/stt", { method: "POST", body: fd });
+        const data = (await res.json()) as { text?: string; error?: string };
+        if (!res.ok || data.error) {
+          setVoiceError(data.error ?? `STT ${res.status}`);
+          setLiveTranscript("");
+          return;
+        }
+        const text = (data.text ?? "").trim();
+        setLiveTranscript(text);
+        if (text) send(text);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[chat/voice] stt failed", err);
+        setVoiceError("Voice transcription failed.");
+        setLiveTranscript("");
+      } finally {
+        setTranscribing(false);
+      }
+    };
+    try {
+      mr.stop();
+    } catch {
+      /* already stopped */
+    }
   }, [send]);
 
   function onHoldStart() {
@@ -276,14 +493,20 @@ export default function Chat({
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden noir-grain"
+      // On phones the chat owns the whole viewport. On tablet+ we wrap the
+      // interrogation in a centered max-w-2xl "screen" with the surrounding
+      // viewport falling back to --bg, so the page reads as a contained
+      // recording on a desk rather than a full-bleed video.
+      className="relative w-full mx-auto h-screen overflow-hidden sm:max-w-2xl sm:border sm:border-[rgba(232,225,211,0.12)] sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
       style={{ background: "var(--bg)", color: "var(--fg)" }}
     >
-      {/* Portrait — full-bleed when collapsed, top band when transcript open */}
+      {/* Portrait — full-bleed when collapsed, top band when transcript
+          open. Use vh units explicitly because the parent is min-h-screen
+          (no fixed height), so a percentage height collapses to 0. */}
       <div
         className="absolute inset-x-0 top-0 z-[1]"
         style={{
-          height: transcriptOpen ? "44vh" : "100%",
+          height: transcriptOpen ? "44vh" : "100vh",
           transition: "height 0.3s ease",
         }}
       >
@@ -300,15 +523,6 @@ export default function Chat({
           style={{
             background:
               "radial-gradient(ellipse 60% 70% at 80% 30%, rgba(200,160,90,0.18) 0%, transparent 60%)",
-          }}
-        />
-        {/* film grain stripes */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            opacity: 0.06,
-            backgroundImage:
-              "repeating-linear-gradient(135deg, rgba(232,225,211,0.5) 0 1px, transparent 1px 14px)",
           }}
         />
         {/* breathing glow when speaking */}
@@ -336,29 +550,45 @@ export default function Chat({
         )}
       </div>
 
-      {/* Top bar: ← board · REC · mute */}
+      {/* Top gradient veil so portrait stays legible behind chrome */}
       <div
-        className="absolute top-0 inset-x-0 z-20 flex items-center justify-between"
+        className="absolute top-0 inset-x-0 z-[15] pointer-events-none"
         style={{
-          padding: "20px 18px 14px",
+          height: 90,
           background:
             "linear-gradient(180deg, rgba(8,6,4,0.85) 0%, rgba(8,6,4,0.55) 60%, transparent 100%)",
         }}
-      >
-        <Link
-          href="/board"
-          className="font-elite uppercase"
-          style={{
-            color: "var(--fg)",
-            fontSize: 10,
-            letterSpacing: "0.3em",
-            opacity: 0.85,
-            padding: "4px 0",
-          }}
-        >
-          ← BOARD
-        </Link>
+      />
 
+      {/* Back link — anchored to the chat sheet (absolute, not fixed) so on
+          desktop it sticks to the centered card's corner rather than the
+          viewport edge. */}
+      <a
+        href="/board"
+        className="absolute z-[60] font-elite uppercase"
+        style={{
+          top: 14,
+          left: 14,
+          fontSize: 10,
+          letterSpacing: "0.32em",
+          color: "var(--fg)",
+          padding: "8px 12px",
+          background: "rgba(8,6,4,0.55)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          border: "1px solid rgba(232,225,211,0.12)",
+          textDecoration: "none",
+          lineHeight: 1,
+        }}
+      >
+        ← BOARD
+      </a>
+
+      {/* Top bar: REC · mute (right-aligned). Back link is in fixed BackLink. */}
+      <div
+        className="absolute top-0 right-0 z-20 flex items-center"
+        style={{ padding: "20px 18px 14px", gap: 14 }}
+      >
         <div
           className="font-elite uppercase flex items-center gap-1.5"
           style={{
@@ -403,13 +633,14 @@ export default function Chat({
         </button>
       </div>
 
-      {/* Subtitle band (only when transcript collapsed) */}
+      {/* Subtitle band (only when transcript collapsed) — sits flush above
+          the grab handle so there's no empty gap. */}
       {!transcriptOpen && (
         <div
           className="absolute inset-x-0 z-[6]"
           style={{
-            bottom: 110,
-            padding: "60px 22px 22px",
+            bottom: 96,
+            padding: "60px 22px 10px",
             background:
               "linear-gradient(0deg, rgba(8,6,4,0.92) 0%, rgba(8,6,4,0.7) 60%, transparent 100%)",
           }}
@@ -471,16 +702,25 @@ export default function Chat({
                 ● live
               </span>
               <p
+                ref={liveCaptionRef}
                 className="italic m-0 flex-1 min-w-0"
                 style={{
                   fontSize: 15,
                   lineHeight: 1.4,
                   color: "#f0e8d8",
                   textShadow: "0 1px 8px rgba(0,0,0,0.9)",
+                  // Bounded marquee window — about 3 lines. Auto-scrolls
+                  // bottom-most as the typewriter advances (see effect
+                  // tied to `typed`), so long replies stream up instead
+                  // of clipping with an ellipsis.
+                  maxHeight: "calc(15px * 1.4 * 3)",
                   overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical" as const,
+                  // Top fade so the line scrolling out doesn't just hard-
+                  // clip — softens the marquee edge.
+                  WebkitMaskImage:
+                    "linear-gradient(180deg, transparent 0%, #000 28%, #000 100%)",
+                  maskImage:
+                    "linear-gradient(180deg, transparent 0%, #000 28%, #000 100%)",
                 }}
               >
                 “{typed}
@@ -502,28 +742,56 @@ export default function Chat({
         </div>
       )}
 
-      {/* Transcript sheet */}
-      <div
-        className="absolute inset-x-0 z-[9] flex flex-col"
-        style={{
-          bottom: transcriptOpen ? 78 : 72,
-          top: transcriptOpen ? "44vh" : "auto",
-          height: transcriptOpen ? "auto" : 24,
-          background: "rgba(8,6,4,0.96)",
-          borderTop: "1px solid rgba(232,225,211,0.18)",
-          borderBottom: transcriptOpen ? "1px solid rgba(232,225,211,0.1)" : "none",
-          transition: "bottom 0.28s ease, top 0.28s ease, height 0.28s ease",
-        }}
-      >
+      {/* Pull-up grab handle, visible when transcript is collapsed. Sits
+          flush against the talk pad so there's no empty gap. Tap or drag
+          opens the chat sheet. */}
+      {!transcriptOpen && (
         <button
-          onClick={() => setTranscriptOpen(o => !o)}
-          aria-label={transcriptOpen ? "Collapse transcript" : "Expand transcript"}
-          className="bg-transparent border-0 cursor-pointer flex items-center justify-center"
-          style={{ height: 24, flexShrink: 0, padding: 0, color: "var(--fg)" }}
+          onClick={() => setTranscriptOpen(true)}
+          aria-label="Open chat"
+          className="absolute inset-x-0 z-[9] cursor-pointer flex items-center justify-center border-0"
+          style={{
+            bottom: 78,
+            height: 18,
+            padding: 0,
+            color: "var(--fg)",
+            // Match the talk pad's near-opaque background so the handle
+            // blends into it — no see-through "hole" between the LISTENING
+            // band and the talk pad.
+            background: "rgba(8,6,4,0.92)",
+          }}
         >
-          <span style={{ width: 36, height: 3, background: "rgba(232,225,211,0.4)" }} />
+          <span
+            style={{
+              width: 44,
+              height: 3,
+              background: "rgba(232,225,211,0.55)",
+              borderRadius: 2,
+            }}
+          />
         </button>
-        {transcriptOpen && (
+      )}
+
+      {/* Transcript sheet — only mounted when open. */}
+      {transcriptOpen && (
+        <div
+          className="absolute inset-x-0 z-[9] flex flex-col"
+          style={{
+            bottom: 78,
+            top: "44vh",
+            background: "rgba(8,6,4,0.96)",
+            borderTop: "1px solid rgba(232,225,211,0.18)",
+            borderBottom: "1px solid rgba(232,225,211,0.1)",
+          }}
+        >
+          <button
+            onClick={() => setTranscriptOpen(false)}
+            aria-label="Collapse transcript"
+            className="bg-transparent border-0 cursor-pointer flex items-center justify-center"
+            style={{ height: 24, flexShrink: 0, padding: 0, color: "var(--fg)" }}
+          >
+            <span style={{ width: 36, height: 3, background: "rgba(232,225,211,0.4)" }} />
+          </button>
           <div
             ref={transcriptRef}
             className="flex-1 overflow-y-auto"
@@ -580,8 +848,8 @@ export default function Chat({
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Talk pad — bottom, always visible */}
       <div
@@ -721,8 +989,8 @@ export default function Chat({
               aria-label="Type instead"
               onClick={() => setTranscriptOpen(true)}
               style={{
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 background: "rgba(232,225,211,0.05)",
                 border: "1px solid rgba(232,225,211,0.12)",
                 color: "rgba(232,225,211,0.7)",
@@ -768,8 +1036,16 @@ export default function Chat({
           >
             Present evidence
           </p>
+          {presentableEvidence.length === 0 && (
+            <p
+              className="italic"
+              style={{ fontSize: 12, color: "rgba(232,225,211,0.45)", padding: "6px 4px" }}
+            >
+              Nothing to show yet — collect physical evidence at the scene first.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-1">
-            {evidenceList.map(ev => (
+            {presentableEvidence.map(ev => (
               <button
                 key={ev.id}
                 disabled={pending || evidencePresented.includes(ev.id)}
@@ -791,7 +1067,8 @@ export default function Chat({
         </div>
       )}
 
-      {/* Unlock toast */}
+      {/* Unlock toast — kept for legacy/in-chat feedback in addition to the
+          global Notifications stack. */}
       {unlockToast && (
         <div
           className="absolute z-40 font-elite uppercase"
@@ -807,6 +1084,29 @@ export default function Chat({
           }}
         >
           🗺 Location unlocked: {unlockToast}
+        </div>
+      )}
+
+      {/* Voice-input error banner — surfaces mic permission denied,
+          unsupported browser, etc. so the player isn't left wondering why
+          hold-to-speak didn't capture anything. */}
+      {voiceError && (
+        <div
+          className="absolute z-40 font-elite uppercase"
+          style={{
+            top: 80,
+            left: 18,
+            padding: "8px 12px",
+            border: "1px solid rgba(168,57,46,0.5)",
+            background: "rgba(8,6,4,0.92)",
+            color: "var(--accent)",
+            fontSize: 10,
+            letterSpacing: "0.24em",
+            maxWidth: "70vw",
+          }}
+          onClick={() => setVoiceError(null)}
+        >
+          {voiceError}
         </div>
       )}
 

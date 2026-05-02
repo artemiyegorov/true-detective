@@ -25,6 +25,30 @@ html, body {
   color: var(--fg);
 }
 
+/* Reserve scrollbar gutter so fixed/centered chrome (the bottom tab pill)
+   doesn't jump horizontally between pages that scroll (Casebook) and
+   pages that don't (Board). Also blend the gutter into --bg so it doesn't
+   read as a stripe on top of full-bleed modals. */
+html {
+  scrollbar-gutter: stable;
+  scrollbar-color: rgba(232, 225, 211, 0.18) var(--bg);
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(232, 225, 211, 0.18);
+  border: 3px solid var(--bg);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(232, 225, 211, 0.32);
+}
+
 body {
   font-family: var(--font-ui), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-feature-settings: "kern", "liga";
@@ -40,10 +64,17 @@ body {
 .font-ui    { font-family: var(--font-ui),    -apple-system, sans-serif; }
 
 /* Film grain overlay — drop into any container with class `noir-grain`
-   to get a subtle aged-off-white grain across the whole frame. */
-.noir-grain {
+   to get a subtle aged-off-white grain across the whole frame.
+   Wrapped in :where() so specificity is 0 — Tailwind positioning utilities
+   (.fixed, .absolute) on the same element / its children always win.
+
+   We deliberately do NOT use `isolation: isolate` here: that would create a
+   stacking context, and any z-50 modal rendered inside (e.g. CasebookView's
+   ClueModal) gets trapped beneath the layout's z-30 Tabs dock because the
+   parent's stacking context only stacks at z-auto. With no isolation the
+   modal at z-50 stacks above Tabs at z-30 at the document root. */
+:where(.noir-grain) {
   position: relative;
-  isolation: isolate;
 }
 .noir-grain::before {
   content: "";
@@ -53,9 +84,20 @@ body {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.91  0 0 0 0 0.88  0 0 0 0 0.82  0 0 0 0.07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   opacity: 0.55;
   mix-blend-mode: screen;
-  z-index: 0;
+  /* Negative z-index pushes the grain behind in-flow content without needing
+     a stacking context — children at default z-index appear above it. */
+  z-index: -1;
 }
-.noir-grain > * { position: relative; z-index: 1; }
+:where(.noir-grain > *) { position: relative; }
+
+/* Modal backdrop: solid --bg on phones (the sheet fills the screen so the
+   backdrop is invisible anyway), dim+blur on tablet+ where the sheet is
+   centered and the page underneath should still read through the sides. */
+@media (min-width: 640px) {
+  .td-modal-backdrop {
+    background: rgba(0, 0, 0, 0.78) !important;
+  }
+}
 
 .noir-vignette {
   background:

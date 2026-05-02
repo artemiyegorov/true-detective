@@ -13,6 +13,39 @@
     "setting_description": "Millbrook — a quiet American small town, population 8,400. Early spring, cold nights.",
     "tone": "grounded, realistic, small-town drama with multiple buried secrets"
   },
+  "ground_truth": {
+    "killer_id": "tom",
+    "motive_keywords": [
+      "affair",
+      "wife",
+      "linda",
+      "exposed",
+      "revenge",
+      "marriage",
+      "collapse",
+      "divorce",
+      "business",
+      "contracts",
+      "henley"
+    ],
+    "evidence_keywords": [
+      "dna",
+      "footprint",
+      "boot",
+      "phone",
+      "call",
+      "22:15",
+      "key",
+      "paperweight",
+      "23:50",
+      "sunday",
+      "no forced entry",
+      "back door",
+      "alley",
+      "camera",
+      "creek"
+    ]
+  },
   "briefing": {
     "opening_scene": "Monday morning, March 17th. 6:47 AM. Martin Reyes, the young baker at Cole & Sons Bakery on Olive Street, arrives to start his shift. He finds his boss, Margaret Cole, dead in the backroom. Blunt force trauma to the back of the head. Time of death: Sunday night, between 23:00 and 01:00.",
     "key_facts": [
@@ -26,7 +59,7 @@
     "your_task": "Margaret was loved by some, resented by some, in conflict with others. You'll need to talk to many people, gather evidence, and decide for yourself who did this — and whether you have enough to prove it.",
     "open_investigation_note": "There is no fixed path. Some witnesses know nothing useful. Some have secrets that have nothing to do with the murder. Be skeptical. Build your case carefully — once you accuse someone, you cannot take it back.",
     "narrator_voice_style": "Grounded, calm, no theatrics. Mid-40s American male.",
-    "narrator_script": "Monday morning. Six forty-seven AM. Martin Reyes, the young baker at Cole and Sons, finds his boss dead in the backroom. Margaret Cole. Fifty-four. Blunt force trauma to the back of the head. The cash drawer wasn't touched. The back door was unlocked. Whoever did this had a key, or Margaret let them in. She had eight people in her life worth talking to. Some loved her. Some had reasons to be angry. Some have nothing to do with this at all. Your job is to figure out which is which.",
+    "narrator_script": "Morning, Detective. Glad you're here. I'll keep it short. Body's Margaret Chen, 47, owner. Delivery driver found her at 6:15 AM, back door was standing open. He called it in, didn't touch anything. Door's unlocked — no damage to the frame, no broken glass. Either she let him in, or he had a key. Two sets of prints on the floor. Combat boot near the door, size 12. Different print closer to the body — dress shoe, size 11, partial. Two people, or one person who changes shoes. Forensics is still working it. Doc's preliminary — blunt force, back of the head. Single strike. She didn't see it coming, or didn't think she needed to. One more thing. Handle on the back door — multiple DNA profiles. Hers, and at least two unknown males. No matches in the system yet. We're waiting on samples from anyone with access to the building. I'll be outside if you need me.",
     "duration_seconds": 50
   },
   "victim": {
@@ -164,9 +197,7 @@
     {
       "time": "00:08",
       "event": "Tom dumps paperweight in Mill Creek behind his office.",
-      "visible_via": [
-        "ev_paperweight_in_creek"
-      ]
+      "visible_via": []
     },
     {
       "time": "00:25",
@@ -247,14 +278,6 @@
           "is_final_breakdown": false
         },
         {
-          "evidence_id": "ev_paperweight_in_creek",
-          "what_it_proves": "The murder weapon was found in Mill Creek behind Tom's office.",
-          "what_it_doesnt_prove": "That Tom put it there. Anyone could.",
-          "reaction": "He stares. 'I don't know what you want me to say. The creek is behind half the businesses on Main Street. Anyone could have put it there.' Mood: rigid, defensive. Alibi unchanged.",
-          "new_info_revealed": "None directly — he won't break on this alone.",
-          "is_final_breakdown": false
-        },
-        {
           "evidence_id": "ev_margaret_cell_log_tom",
           "what_it_proves": "Tom called Margaret at 22:15 Sunday — 9 minutes. He never mentioned this call.",
           "what_it_doesnt_prove": "That he went to the bakery later.",
@@ -271,17 +294,40 @@
           "is_final_breakdown": false
         },
         {
-          "evidence_id": "ev_dna_paperweight",
-          "what_it_proves": "Tom's skin cell DNA on the paperweight (he gripped it). Combined with the creek location and the camera footage, this is conclusive.",
-          "what_it_doesnt_prove": "Nothing — this is conclusive evidence.",
-          "reaction": "Final breakdown. Long, silent moment. Then quiet: 'She broke everything. Linda. The contracts. My whole life. I just wanted her to acknowledge what she did. She wouldn't even look at me. She turned away. I — I don't even remember picking it up. I just — it was in my hand.' Mood: hollow, defeated. He confesses but frames it as 'lost control,' not premeditation.",
-          "new_info_revealed": "Full confession to the killing, framed as crime of passion.",
-          "is_final_breakdown": true
+          "evidence_id": "ev_dna_match_tom",
+          "what_it_proves": "Tom's DNA on the back door handle of the bakery.",
+          "what_it_doesnt_prove": "WHEN it was deposited. The DNA is undated; Tom rationalises he was at the bakery a few days earlier and left prints then.",
+          "reaction": "Rationalises, does NOT confess on this alone. Steady, almost relieved: 'Yeah — that's possible. I stopped by the bakery a couple days before. Brought coffee for Margaret. We chatted at the back door for a minute. I must have left prints then. Few days old, Detective. Doesn't put me there Sunday night.' Alibi unchanged ('home alone Sunday'). Holds this story until corroborating physical evidence is stacked on top.",
+          "new_info_revealed": "Admits being at the bakery a couple days earlier — but NOT Sunday.",
+          "is_final_breakdown": false
         }
       ],
-      "unlockable_actions": {},
+      "final_breakdown_condition": {
+        "description": "Tom only collapses when ev_dna_match_tom AND at least 2 corroborating physical clues have been presented in the SAME interrogation. Motive context (affair / divorce / business collapse) should be on the table.",
+        "required_evidence": ["ev_dna_match_tom"],
+        "min_corroborators": 2,
+        "corroborator_pool": [
+          "ev_security_camera_glimpse",
+          "ev_margaret_cell_log_tom",
+          "ev_tom_old_key",
+          "ev_partial_footprint_size_11",
+          "ev_footprint_match_tom_11",
+          "ev_paperweight_recovered"
+        ],
+        "reaction": "Long silence — exhales. 'She broke everything. Linda. The contracts. My whole life. Six weeks. I just wanted her to acknowledge what she'd done. To say sorry like she meant it. She wouldn't even look at me. She turned away. I don't even remember picking it up. It was just there. In my hand. And then she was on the floor.' Then very quiet: 'I want a lawyer.' Confesses framed as crime of passion. Reveals weapon location on follow-up — unlocks ev_paperweight_recovered."
+      },
+      "unlockable_actions": {
+        "reveal_weapon_location": {
+          "trigger_conditions": [
+            "ev_dna_match_tom_already_presented",
+            "player_asks_about_weapon_or_paperweight_or_where_it_is"
+          ],
+          "response": "[quiet, hollow] Mill Creek. Behind my office. I drove past on the way home, parked for a minute, threw it in. It should still be there. I... I'm sorry.",
+          "unlocks_evidence": "ev_paperweight_recovered"
+        }
+      },
       "would_confess_to_murder": false,
-      "confession_conditions": "Only confesses on ev_dna_paperweight. Even then, frames it as loss of control. Never says 'I planned it' or 'I went there to kill her.' His version: 'I went to talk. It got out of control.'",
+      "confession_conditions": "Does NOT confess on ev_dna_match_tom alone — rationalises he stopped by a few days earlier and left prints. Only collapses when DNA + at least 2 corroborating physical clues are presented in the same interrogation (see final_breakdown_condition). Even then, frames it as loss of control, not premeditation.",
       "initial_mood": "warm, sympathetic (when first met as 'family friend' Monday morning at bakery)",
       "discoverable_path": "Tom is NOT obviously suspicious at the start. Player must follow secondary leads: cell phone records, the affair, his recent business troubles, his old keys to the bakery."
     },
@@ -725,7 +771,7 @@
   "locations": [
     {
       "id": "loc_bakery_main",
-      "name": "Cole & Sons Bakery — Front",
+      "name": "Cole & Sons Bakery",
       "available_from_start": true,
       "hotspots": [
         {
@@ -813,7 +859,7 @@
           "id": "hs_door_handle_dna",
           "label": "Door handle (back door)",
           "available_from_start": true,
-          "on_click_text": "Forensics found two DNA profiles on the handle: Margaret's and an unknown male's. Comparison pending suspect samples.",
+          "on_click_text": "Forensics found Margaret's DNA on the handle plus at least two unknown male profiles. Comparison pending suspect samples.",
           "reveals": {
             "type": "evidence",
             "id": "ev_dna_door_handle"
@@ -830,14 +876,10 @@
           }
         },
         {
-          "id": "hs_phone",
-          "label": "Bakery landline",
+          "id": "hs_to_bakery_front",
+          "label": "Through to the bakery front",
           "available_from_start": true,
-          "on_click_text": "Call log: incoming at 22:15 from a cell number — duration 9 minutes. Number traces to Tom Brennan.",
-          "reveals": {
-            "type": "evidence",
-            "id": "ev_margaret_cell_log_tom"
-          }
+          "leads_to_location": "loc_bakery_main"
         }
       ]
     },
@@ -871,6 +913,12 @@
           "label": "Tyler's room (upstairs)",
           "available_from_start": true,
           "leads_to_npc": "char_tyler"
+        },
+        {
+          "id": "hs_eleanor_porch",
+          "label": "Mrs. Carrington's porch (across the street)",
+          "available_from_start": true,
+          "leads_to_npc": "char_eleanor"
         }
       ]
     },
@@ -902,17 +950,6 @@
           "label": "Kevin (bartender)",
           "available_from_start": true,
           "leads_to_npc": "char_kevin"
-        },
-        {
-          "id": "hs_receipts",
-          "label": "Sunday receipts",
-          "available_from_start": true,
-          "requires_npc_interaction": "char_kevin",
-          "on_click_text": "Kevin shows tab: Sarah open 22:03, close 23:04, $24.",
-          "reveals": {
-            "type": "evidence",
-            "id": "ev_bar_receipt"
-          }
         }
       ]
     },
@@ -946,25 +983,6 @@
         }
       ],
       "hotspots": [
-        {
-          "id": "hs_creek_behind",
-          "label": "Mill Creek behind office",
-          "available_from_start": false,
-          "unlock_triggers": [
-            {
-              "type": "search_warrant_after_evidence",
-              "required_evidence": [
-                "ev_security_camera_glimpse",
-                "ev_margaret_cell_log_tom"
-              ]
-            }
-          ],
-          "on_click_text": "Metal detection in the creek. A bronze paperweight, recovered. Engraved: 'Millbrook Chamber of Commerce 2019'.",
-          "reveals": {
-            "type": "evidence",
-            "id": "ev_paperweight_in_creek"
-          }
-        },
         {
           "id": "hs_office_desk",
           "label": "Tom's office desk",
@@ -1019,16 +1037,33 @@
     {
       "id": "ev_margaret_cell_log_tom",
       "name": "Tom called Margaret at 22:15",
-      "discovery": "direct (bakery phone log)",
-      "found_at": "loc_backroom:hs_phone",
-      "significance": "Bakery call log: an incoming call Sunday at 22:15, nine minutes long, from a cell number registered to Tom Brennan."
+      "discovery": "Martin Reyes prints the bakery call log when asked — produced during interview",
+      "significance": "Bakery call log printout from Martin: an incoming call Sunday at 22:15, nine minutes long, from a cell number registered to Tom Brennan."
     },
     {
       "id": "ev_dna_door_handle",
-      "name": "Two DNA profiles on back door handle",
-      "discovery": "direct",
+      "name": "Multiple DNA profiles on back door handle",
+      "discovery": "direct — collected from the back door handle at the scene",
       "found_at": "loc_backroom:hs_door_handle_dna",
-      "significance": "Forensics finds two DNA profiles on the back door handle — Margaret's, and an unknown male's. The unknown profile would need to be matched against a suspect sample to identify a person."
+      "significance": "Forensics finds multiple DNA profiles on the back door handle: Margaret's, and at least two unknown male profiles. Comparison with suspect samples is needed to identify them — request a lab match against any suspect already on the board.",
+      "lab_tests": [
+        {
+          "id": "match_unknown_dna",
+          "label": "Run unknown DNA profiles against a suspect",
+          "kind": "match_npc",
+          "matches": {
+            "tom": {
+              "evidence_id": "ev_dna_match_tom",
+              "result_text": "Match — Profile #2 is Thomas Brennan (probability 99.98%). His DNA is on the back door handle."
+            },
+            "daniel": {
+              "evidence_id": "ev_dna_match_daniel",
+              "result_text": "Match — Profile #1 is Daniel Kim (probability 99.97%). His DNA is on the back door handle."
+            }
+          },
+          "no_match_text": "No match — neither unknown profile belongs to this suspect."
+        }
+      ]
     },
     {
       "id": "ev_bar_receipt",
@@ -1076,17 +1111,40 @@
       "significance": "Grainy footage from a street camera across from the bakery: a man matching Tom's height and build entering the alley at 23:38. Face not clearly visible."
     },
     {
-      "id": "ev_paperweight_in_creek",
-      "name": "Murder weapon in Mill Creek behind Tom's office",
-      "discovery": "warrant search after building case against Tom",
-      "found_at": "loc_brennan_office:hs_creek_behind",
-      "significance": "Recovered from Mill Creek behind Brennan Real Estate: a heavy bronze paperweight, engraved 'Millbrook Chamber of Commerce 2019'."
+      "id": "ev_dna_match_tom",
+      "name": "DNA Match: Tom Brennan to Door Handle",
+      "discovery": "police procedure — Tom provided a voluntary sample; lab confirmed the match",
+      "significance": "Conclusive. Tom Brennan's DNA matches the second unknown male profile on the back door handle. He was at the back door of the bakery during the murder window. He has no innocent explanation for being there.",
+      "unlock_requirements": {
+        "type": "AND",
+        "conditions": [
+          {
+            "npc_relevance": "char_tom",
+            "min_evidence_count": 3,
+            "any_of": [
+              "ev_tom_margaret_affair",
+              "ev_linda_divorce_filing",
+              "ev_tom_old_key",
+              "ev_margaret_cell_log_tom",
+              "ev_security_camera_glimpse"
+            ]
+          }
+        ]
+      },
+      "delivery_delay_seconds": 120,
+      "system_message_on_unlock": "Tom Brennan provided a voluntary DNA sample. Match confirmed: his DNA on the back door handle. He has no innocent explanation for being at the murder scene that night."
     },
     {
-      "id": "ev_dna_paperweight",
-      "name": "Tom's DNA on paperweight",
-      "discovery": "automatic after ev_paperweight_in_creek + Tom is interrogated",
-      "significance": "Lab results from the recovered paperweight: skin-cell DNA on the grip matches Tom Brennan."
+      "id": "ev_paperweight_recovered",
+      "name": "Murder weapon recovered from Mill Creek",
+      "discovery": "Tom reveals the location after his confession; recovered by divers",
+      "significance": "A heavy bronze paperweight, engraved 'Millbrook Chamber of Commerce 2019', recovered from Mill Creek behind Brennan Real Estate. Margaret's blood and hair on one corner. Tom led police to the spot after confessing — physical confirmation of his statement."
+    },
+    {
+      "id": "ev_dna_match_daniel",
+      "name": "DNA Match: Daniel Kim to Door Handle",
+      "discovery": "lab — DNA comparison run against Daniel Kim's sample",
+      "significance": "One of the unknown male profiles on the back door handle is Daniel Kim's. Consistent with his story of banging on the back door Sunday night around 22:45 — but it places him at the door."
     },
     {
       "id": "ev_eleanor_witness_daniel",
@@ -1129,7 +1187,7 @@
     "truth": {
       "name": "Truth",
       "rating": "⭐⭐⭐⭐⭐",
-      "trigger": "Player accuses Tom Brennan with motive citing affair/divorce/business collapse, AND has presented to Tom (or has in evidence) at least 3 of: ev_paperweight_in_creek, ev_dna_paperweight, ev_security_camera_glimpse, ev_tom_old_key, ev_linda_divorce_filing, ev_tom_margaret_affair, ev_margaret_cell_log_tom",
+      "trigger": "Player accuses Tom Brennan with motive citing affair/divorce/business collapse, AND has presented to Tom (or has in evidence) at least 3 of: ev_dna_match_tom, ev_security_camera_glimpse, ev_tom_old_key, ev_linda_divorce_filing, ev_tom_margaret_affair, ev_margaret_cell_log_tom, ev_paperweight_recovered",
       "outcome_text": "Tom is convicted. The full picture comes out. You receive a commendation. Sarah faces embezzlement charges separately. Daniel is charged with disturbing the peace. The town reels but begins to heal."
     },
     "defensible_wrong_sarah": {

@@ -29,20 +29,41 @@ export default async function LocationPage({ params }: { params: { locId: string
     leads_to_npc: h.leads_to_npc,
   }));
 
-  const evidenceMap: Record<string, Pick<Evidence, "id" | "name" | "significance" | "found_at">> = {};
+  const evidenceMap: Record<string, Pick<Evidence, "id" | "name" | "significance" | "found_at" | "image">> = {};
   for (const e of ground.evidence) {
-    evidenceMap[e.id] = { id: e.id, name: e.name, significance: e.significance, found_at: e.found_at };
+    evidenceMap[e.id] = {
+      id: e.id,
+      name: e.name,
+      significance: e.significance,
+      found_at: e.found_at,
+      image: e.image,
+    };
   }
 
   const factsMap: Record<string, string> = {};
   for (const f of ground.facts) factsMap[f.id] = f.text;
 
   // Briefing only renders for the crime scene on first visit. Pass the
-  // narrator script + key facts from the case JSON.
+  // video + the evidence the duty officer name-drops so we can mark them
+  // as "noted" automatically once the briefing finishes — the player
+  // shouldn't have to re-click hotspots for things the officer just told
+  // them about.
   const briefing = (loc.id as string) === "loc_backroom" ? {
     narrator_script: ground.briefing.narrator_script,
     key_facts: ground.briefing.key_facts,
     your_task: ground.briefing.your_task,
+    video: "/breifing_captions.mp4",
+    auto_discover_evidence: [
+      "ev_footprint_44",
+      "ev_partial_footprint_size_11",
+      "ev_dna_door_handle",
+    ],
+    auto_discover_facts: [
+      // "blunt force, back of the head" → struck-from-behind
+      "fact_struck_from_behind",
+      // "no damage to the frame… either she let him in, or he had a key"
+      "fact_killer_had_key",
+    ],
   } : null;
 
   // Hand-curated location photos. Add new entries as art is delivered.

@@ -9,6 +9,7 @@ import {
   getState,
   pinImportant,
   resetBoardLayout,
+  resetPlayerState,
   setNodePosition,
   unpinImportant,
   type PlayerState,
@@ -21,6 +22,8 @@ import {
   type BoardNode,
 } from "@/lib/board-graph";
 import RelatedPolaroid from "../RelatedPolaroid";
+import { BackLink } from "../BackLink";
+import Accusation from "../Accusation";
 
 export type ClueDetail = {
   id: string;
@@ -34,15 +37,18 @@ export default function BoardView({
   evidenceById,
   factsById,
   caseTitle,
+  groundTruth,
 }: {
   evidenceById: Record<string, ClueDetail>;
   factsById: Record<string, string>;
   caseTitle: string;
+  groundTruth: import("@/lib/case").AccusationGroundTruth;
 }) {
   const router = useRouter();
   const [state, setState] = useState<PlayerState | null>(null);
   const [openNode, setOpenNode] = useState<BoardNode | null>(null);
   const [showImportant, setShowImportant] = useState(false);
+  const [showVerdictReplay, setShowVerdictReplay] = useState(false);
 
   // Locations skip the dossier — clicking a location card on the board
   // takes the player straight into the scene.
@@ -85,24 +91,47 @@ export default function BoardView({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header — home left, reset + important right (tabs are in the
-          floating bottom dock, mounted in the root layout). */}
-      <header className="px-6 py-3 flex items-center justify-between border-b border-[rgba(232,225,211,0.12)] bg-black/60 backdrop-blur z-10">
-        <Link
-          href="/"
-          className="font-elite uppercase"
-          style={{ fontSize: 10, letterSpacing: "0.3em", color: "rgba(232,225,211,0.55)" }}
-        >
-          ← cases
-        </Link>
+      {!openNode && !showImportant && <BackLink href="/" label="cases" />}
+
+      {/* Header — actions only on the right; back is handled by BackLink. */}
+      <header className="px-6 py-3 flex items-center justify-end border-b border-[rgba(232,225,211,0.12)] bg-black/60 backdrop-blur z-10">
         <div className="flex items-center gap-3">
+          {state.accusation && (
+            <button
+              onClick={() => setShowVerdictReplay(true)}
+              className="font-elite uppercase inline-flex items-center"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.32em",
+                color: "var(--accent)",
+                padding: "6px 10px",
+                border: "1px solid rgba(168,57,46,0.6)",
+                gap: 8,
+              }}
+              title="View final verdict"
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>⚖</span>
+              <span>Verdict</span>
+            </button>
+          )}
           <button
             onClick={() => {
-              if (confirm("Reset all card positions to default?")) resetBoardLayout();
+              if (
+                confirm(
+                  "Reset the case? This clears all discovered evidence, met witnesses, unlocked locations, pinned clues and card positions — start the investigation from scratch.",
+                )
+              ) {
+                resetPlayerState();
+                resetBoardLayout();
+                // Re-mount the page so all useEffect-driven state derived
+                // from sessionStorage (board layout, briefing flag, etc.)
+                // re-reads cleanly.
+                if (typeof window !== "undefined") window.location.href = "/board";
+              }
             }}
             className="font-elite uppercase"
             style={{ fontSize: 10, letterSpacing: "0.32em", color: "rgba(232,225,211,0.5)", padding: "6px 8px" }}
-            title="Reset card positions"
+            title="Reset the entire case to zero"
           >
             reset
           </button>
@@ -123,8 +152,9 @@ export default function BoardView({
         </div>
       </header>
 
-      {/* Canvas — leave room at the bottom for the floating tab dock */}
-      <div className="flex-1 relative overflow-hidden" style={{ marginBottom: 80 }}>
+      {/* Canvas — fills to bottom; the floating pill sits on top of the
+          cork board (matches design). */}
+      <div className="flex-1 relative overflow-hidden">
         <BoardCanvas
           nodes={data.nodes}
           edges={data.edges}
@@ -139,10 +169,24 @@ export default function BoardView({
             node={openNode}
             state={state}
             evidenceById={evidenceById}
+            caseTitle={caseTitle}
+            groundTruth={groundTruth}
             onClose={() => setOpenNode(null)}
           />
         )}
       </AnimatePresence>
+
+      {showVerdictReplay && state.accusation && (
+        <Accusation
+          accusedNpcId={state.accusation.accusedNpcId}
+          accusedName={state.accusation.accusedName}
+          accusedRole=""
+          accusedPortrait={null}
+          groundTruth={groundTruth}
+          caseTitle={caseTitle}
+          onClose={() => setShowVerdictReplay(false)}
+        />
+      )}
 
       <AnimatePresence>
         {showImportant && (
@@ -487,11 +531,15 @@ function DossierPanel({
   node,
   state,
   evidenceById,
+  caseTitle,
+  groundTruth,
   onClose,
 }: {
   node: BoardNode;
   state: PlayerState;
   evidenceById: Record<string, ClueDetail>;
+  caseTitle: string;
+  groundTruth: import("@/lib/case").AccusationGroundTruth;
   onClose: () => void;
 }) {
   // Walk the visible-graph edges to find related nodes by kind.
@@ -507,6 +555,11 @@ function DossierPanel({
   const npcReveals = node.kind === "person" && node.refId
     ? state.revealedByNpc[node.refId] ?? []
     : [];
+
+  // Accusation flow lives at this layer so we can hide the dossier's own
+  // back-link and × close while the formal-accusation modal is on top —
+  // otherwise they bleed through and overlap "STEP 2 / 2 · FORMAL ACCUSATION".
+  const [accusing, setAccusing] = useState(false);
 
   const isClue = node.kind === "clue";
   const clueDetail = isClue && node.refId ? evidenceById[node.refId] : null;
@@ -527,14 +580,27 @@ function DossierPanel({
   if (node.kind === "person") {
     return (
       <motion.div
-        className="fixed inset-0 z-50 overflow-hidden"
-        style={{ background: "#0a0604" }}
+        className="td-modal-backdrop fixed inset-0 z-50 overflow-hidden sm:flex sm:items-center sm:justify-center sm:py-10"
+        style={{
+          background: "#0a0604",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+        }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         transition={{ duration: 0.32, ease: [0.2, 0.7, 0.2, 1] }}
+        onClick={onClose}
       >
-        {/* Full-bleed portrait */}
+        {/* Sheet — full-bleed on phone; centered max-w-2xl card with a
+            fixed aspect on desktop so the underlying board remains visible
+            on the sides. */}
+        <div
+          className="relative w-full h-full sm:max-w-2xl sm:h-[88vh] sm:rounded-sm sm:border sm:border-[rgba(232,225,211,0.14)] sm:overflow-hidden sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
+          style={{ background: "#0a0604" }}
+          onClick={e => e.stopPropagation()}
+        >
+        {/* Full-bleed portrait — fills the sheet on every viewport. */}
         <div className="absolute inset-0">
           {heroImage ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -560,7 +626,34 @@ function DossierPanel({
           }}
         />
 
-        {/* Square close button — top-right */}
+        {/* Back link — anchored to the sheet's top-left so on desktop it
+            sticks to the centered card, not the viewport edge. Hidden
+            while the accusation overlay is on top. */}
+        {!accusing && <button
+          type="button"
+          onClick={onClose}
+          aria-label="Back to board"
+          className="absolute z-[5] font-elite uppercase"
+          style={{
+            top: 14,
+            left: 14,
+            fontSize: 10,
+            letterSpacing: "0.32em",
+            color: "var(--fg)",
+            padding: "8px 12px",
+            background: "rgba(8,6,4,0.55)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            border: "1px solid rgba(232,225,211,0.12)",
+            lineHeight: 1,
+          }}
+        >
+          ← BOARD
+        </button>}
+
+        {/* Square close button — top-right. Stays visible during the
+            accusation flow so the player can always bail out of the
+            modal stack with a single tap. */}
         <button
           onClick={onClose}
           aria-label="Close"
@@ -659,6 +752,17 @@ function DossierPanel({
               <span style={{ display: "inline-block", transform: "translateY(-1px)" }}>→</span>
             </Link>
           )}
+
+          <PersonAccuseButton
+            node={node}
+            state={state}
+            caseTitle={caseTitle}
+            groundTruth={groundTruth}
+            open={accusing}
+            onOpen={() => setAccusing(true)}
+            onClose={() => setAccusing(false)}
+          />
+        </div>
         </div>
       </motion.div>
     );
@@ -667,16 +771,26 @@ function DossierPanel({
   // Clue → text-card modal (covered separately by EvidenceDetail style).
   return (
     <motion.div
-      className="fixed inset-0 z-50 overflow-y-auto"
-      style={{ background: "var(--bg)" }}
+      className="td-modal-backdrop fixed inset-0 z-50 overflow-y-auto sm:flex sm:items-start sm:justify-center sm:py-10"
+      style={{
+        background: "var(--bg)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }}
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={onClose}
     >
-      {/* Close button */}
+      <div
+        className="relative w-full sm:max-w-2xl sm:rounded-sm sm:border sm:border-[rgba(232,225,211,0.14)] sm:overflow-hidden sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
+        style={{ background: "var(--bg)" }}
+        onClick={e => e.stopPropagation()}
+      >
+      {/* Close button — anchored to the sheet on desktop. */}
       <button
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="fixed z-50 flex items-center justify-center"
+        className="absolute z-[2] flex items-center justify-center"
         style={{
           top: 18, right: 18, width: 38, height: 38,
           background: "transparent",
@@ -755,7 +869,7 @@ function DossierPanel({
               }}
               onClick={onClose}
             >
-              {node.kind === "person" ? "Open Interview" : "Visit Location"}
+              {node.kind === "location" ? "Visit Location" : "Open"}
               <span style={{ display: "inline-block", transform: "translateY(-1px)" }}>→</span>
             </Link>
           )}
@@ -784,7 +898,96 @@ function DossierPanel({
           )}
         </div>
       </motion.div>
+      </div>
     </motion.div>
+  );
+}
+
+// Big red ACCUSE button — only on person dossiers, only after at least
+// one chat exchange. Mounts the full-screen Accusation flow on click.
+// If the player has already accused someone in this session, the button
+// is hidden (Reset to start over).
+function PersonAccuseButton({
+  node,
+  state,
+  caseTitle,
+  groundTruth,
+  open,
+  onOpen,
+  onClose,
+}: {
+  node: BoardNode;
+  state: PlayerState;
+  caseTitle: string;
+  groundTruth: import("@/lib/case").AccusationGroundTruth;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  if (node.kind !== "person" || !node.refId) return null;
+  const alreadyAccused = !!state.accusation;
+  const hasMet = state.metNpcs.includes(node.refId);
+  const enabled = hasMet && !alreadyAccused;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => enabled && onOpen()}
+        disabled={!enabled}
+        className="font-elite uppercase block w-full"
+        style={{
+          marginTop: 16,
+          padding: "16px 18px",
+          background: enabled ? "var(--accent)" : "rgba(168,57,46,0.18)",
+          border: `1px solid ${enabled ? "var(--accent)" : "rgba(168,57,46,0.4)"}`,
+          color: enabled ? "#fff" : "rgba(232,225,211,0.45)",
+          fontSize: 12,
+          letterSpacing: "0.32em",
+          fontWeight: 700,
+          cursor: enabled ? "pointer" : "not-allowed",
+        }}
+      >
+        Accuse {node.label.split(" ")[0]}
+      </button>
+      {!hasMet && !alreadyAccused && (
+        <p
+          className="italic"
+          style={{
+            marginTop: 6,
+            fontSize: 12,
+            color: "rgba(232,225,211,0.45)",
+            textAlign: "center",
+          }}
+        >
+          Talk to them at least once before formally accusing.
+        </p>
+      )}
+      {alreadyAccused && (
+        <p
+          className="font-elite uppercase"
+          style={{
+            marginTop: 8,
+            fontSize: 9,
+            letterSpacing: "0.32em",
+            color: "rgba(232,225,211,0.55)",
+            textAlign: "center",
+          }}
+        >
+          Case closed — verdict filed
+        </p>
+      )}
+      {open && node.refId && (
+        <Accusation
+          accusedNpcId={node.refId}
+          accusedName={node.label}
+          accusedRole={node.role ?? ""}
+          accusedPortrait={node.image ?? null}
+          groundTruth={groundTruth}
+          caseTitle={caseTitle}
+          onClose={onClose}
+        />
+      )}
+    </>
   );
 }
 
@@ -819,12 +1022,13 @@ function DossierKnown({
   npcReveals: string[];
   evidenceById: Record<string, ClueDetail>;
 }) {
-  const hasContent = connectedClues.length > 0 || npcReveals.length > 0;
+  // Reveal markers (`names_*`, `mentions_*`) are internal gating signals
+  // for the board graph — they're not facts the detective "knows" about
+  // this person. Strip them before rendering, leave only prose reveals.
+  const proseReveals = npcReveals.filter(r => !/^(names|mentions)_/.test(r));
+  const hasContent = connectedClues.length > 0 || proseReveals.length > 0;
   return (
     <div>
-      <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500 mb-2">
-        What we know
-      </p>
       {!hasContent && (
         <p className="italic text-sm text-neutral-600">
           Nothing yet. Talk to them or surface evidence.
@@ -848,9 +1052,9 @@ function DossierKnown({
           })}
         </ul>
       )}
-      {npcReveals.length > 0 && (
+      {proseReveals.length > 0 && (
         <ul className="text-sm text-neutral-300 space-y-1">
-          {npcReveals.map((r, i) => (
+          {proseReveals.map((r, i) => (
             <li key={i} className="flex gap-2">
               <span className="text-amber-400">·</span>
               <span>{r}</span>
@@ -889,7 +1093,7 @@ function ImportantPanel({
 
   return (
     <motion.div
-      className="fixed inset-0 z-40 bg-black/60 flex justify-end"
+      className="fixed inset-0 z-[70] bg-black/60 flex justify-end"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
     >

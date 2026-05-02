@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { Star } from "lucide-react";
 import {
   discoverEvidence,
   discoverFact,
@@ -17,6 +17,7 @@ import {
 import { BOARD_EDGES, BOARD_NODES, visibleNodes, type BoardNode } from "@/lib/board-graph";
 import { sceneFor } from "@/lib/scene-content";
 import RelatedPolaroid from "../../RelatedPolaroid";
+import { BackLink } from "../../BackLink";
 
 type Hotspot = {
   id: string;
@@ -29,7 +30,7 @@ type Hotspot = {
 };
 
 type RevealedItem =
-  | { kind: "evidence"; id: string; name: string; significance: string }
+  | { kind: "evidence"; id: string; name: string; significance: string; image?: string }
   | { kind: "fact"; id: string; text: string }
   | { kind: "info"; id: string; text: string };
 
@@ -46,9 +47,16 @@ export default function LocationView({
   locName: string;
   locImage: string | null;
   hotspots: Hotspot[];
-  evidenceMap: Record<string, { id: string; name: string; significance: string; found_at?: string }>;
+  evidenceMap: Record<string, { id: string; name: string; significance: string; found_at?: string; image?: string }>;
   factsMap: Record<string, string>;
-  briefing: { narrator_script: string; key_facts: string[]; your_task: string } | null;
+  briefing: {
+    narrator_script: string;
+    key_facts: string[];
+    your_task: string;
+    video?: string;
+    auto_discover_evidence?: string[];
+    auto_discover_facts?: string[];
+  } | null;
 }) {
   const [state, setState] = useState<PlayerState | null>(null);
   const [reveal, setReveal] = useState<RevealedItem | null>(null);
@@ -72,6 +80,19 @@ export default function LocationView({
     }
   }, [locId, briefing]);
 
+  // When the briefing closes (or auto-completes) mark the evidence and
+  // facts the duty officer name-dropped so the player isn't forced to
+  // re-collect them from the scene one-by-one.
+  function handleBriefingClose() {
+    if (briefing?.auto_discover_evidence) {
+      for (const id of briefing.auto_discover_evidence) discoverEvidence(id);
+    }
+    if (briefing?.auto_discover_facts) {
+      for (const id of briefing.auto_discover_facts) discoverFact(id);
+    }
+    setShowBriefing(false);
+  }
+
   function clickHotspot(hs: Hotspot) {
     if (hs.leads_to_npc) return;       // person cards handle their own click
     if (hs.leads_to_location) return;  // location cards handle their own click
@@ -80,7 +101,7 @@ export default function LocationView({
       const ev = evidenceMap[hs.reveals.id];
       if (ev) {
         discoverEvidence(ev.id);
-        setReveal({ kind: "evidence", id: ev.id, name: ev.name, significance: ev.significance });
+        setReveal({ kind: "evidence", id: ev.id, name: ev.name, significance: ev.significance, image: ev.image });
         return;
       }
     }
@@ -101,7 +122,18 @@ export default function LocationView({
   // bare list (no tag pills) — the grouping just shapes layout sections.
   const peopleHotspots = hotspots.filter(h => h.leads_to_npc);
   const exitHotspots = hotspots.filter(h => h.leads_to_location);
-  const objectHotspots = hotspots.filter(h => !h.leads_to_npc && !h.leads_to_location);
+  // "Around you" only lists interactive objects the player hasn't yet
+  // surfaced. Once a hotspot's reveal lands in discoveredEvidence /
+  // discoveredFacts it's redundant with "Clues from this location" above,
+  // so we drop it from the list to keep the scene compact.
+  const objectHotspots = hotspots.filter(h => {
+    if (h.leads_to_npc || h.leads_to_location) return false;
+    const r = h.reveals;
+    if (!r) return true;
+    if (r.type === "evidence" && state.discoveredEvidence.includes(r.id)) return false;
+    if (r.type === "fact" && state.discoveredFacts.includes(r.id)) return false;
+    return true;
+  });
 
   // Person nodes from the global graph, looked up by char_id so we can
   // render their photo cards.
@@ -133,7 +165,7 @@ export default function LocationView({
   // Clues the player has discovered at this location.
   const cluesHere = state.discoveredEvidence
     .map(id => evidenceMap[id])
-    .filter((ev): ev is { id: string; name: string; significance: string; found_at?: string } => !!ev)
+    .filter((ev): ev is { id: string; name: string; significance: string; found_at?: string; image?: string } => !!ev)
     .filter(ev => ev.found_at?.split(":")[0] === locId);
 
   const labelFor = (hs: Hotspot) => sceneContent?.labels?.[hs.id] ?? hs.label;
@@ -153,16 +185,7 @@ export default function LocationView({
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-neutral-950" />
       </div>
 
-      {/* Top — back to board only (tabs are in the floating bottom dock) */}
-      <header className="fixed top-0 inset-x-0 z-30 flex items-end" style={{ padding: "12px 18px 8px" }}>
-        <Link
-          href="/board"
-          className="font-elite uppercase"
-          style={{ fontSize: 10, letterSpacing: "0.32em", color: "var(--fg)", padding: 4 }}
-        >
-          ← BOARD
-        </Link>
-      </header>
+      {!reveal && !showBriefing && <BackLink href="/board" label="BOARD" />}
 
       {/* Spacer so the title starts well into the visible hero */}
       <div className="h-[60vh] relative z-0" />
@@ -216,7 +239,7 @@ export default function LocationView({
                   <ObjectButton
                     label={ev.name}
                     discovered={true}
-                    onClick={() => setReveal({ kind: "evidence", id: ev.id, name: ev.name, significance: ev.significance })}
+                    onClick={() => setReveal({ kind: "evidence", id: ev.id, name: ev.name, significance: ev.significance, image: ev.image })}
                   />
                 </li>
               ))}
@@ -269,9 +292,40 @@ export default function LocationView({
 
       <AnimatePresence>
         {showBriefing && briefing && (
-          <BriefingModal briefing={briefing} onClose={() => setShowBriefing(false)} />
+          <BriefingModal briefing={briefing} onClose={handleBriefingClose} />
         )}
       </AnimatePresence>
+
+      {/* Replay-briefing button — top-right, mirroring the BackLink that
+          sits top-left. Same vertical position so they read as a pair.
+          Hidden whenever any modal is up (reveal / briefing) so it doesn't
+          overlap the modal's own close × button. */}
+      {briefing && !showBriefing && !reveal && (
+        <button
+          onClick={() => setShowBriefing(true)}
+          aria-label="Replay duty officer briefing"
+          title="Replay briefing"
+          className="fixed z-[60] flex items-center justify-center"
+          style={{
+            right: 14,
+            top: 14,
+            // Match BackLink's pill height (≈34px). Square keeps the play
+            // glyph centered cleanly.
+            width: 34,
+            height: 34,
+            padding: 0,
+            background: "rgba(8,6,4,0.55)",
+            border: "1px solid rgba(232,225,211,0.12)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            color: "var(--fg)",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M3 2l9 5-9 5V2z" fill="currentColor" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -335,71 +389,159 @@ function RevealModal({
   isPinned: boolean;
   onClose: () => void;
 }) {
+  const isEvidence = reveal.kind === "evidence";
+  const isFact = reveal.kind === "fact";
+  const breadcrumb = isEvidence
+    ? "Casebook / Evidence"
+    : isFact
+    ? "Field notes / Observation"
+    : "Field notes / Note";
+  const typeTag = isEvidence ? "Physical evidence" : isFact ? "Note" : "Observation";
+  const title = isEvidence ? reveal.name : reveal.text;
+  const [imgFailed, setImgFailed] = useState(false);
+  const imageSrc = isEvidence && reveal.image && !imgFailed ? reveal.image : null;
+
   return (
     <motion.div
+      className="td-modal-backdrop fixed inset-0 z-50 overflow-y-auto sm:flex sm:items-start sm:justify-center sm:py-10"
+      style={{
+        background: "var(--bg)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+      }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/85 z-50 overflow-y-auto"
       onClick={onClose}
     >
-      <div className="min-h-full flex items-start sm:items-center justify-center p-4 py-12">
-      <motion.div
-        initial={{ scale: 0.94, y: 8 }}
-        animate={{ scale: 1, y: 0 }}
-        className="relative bg-[#15161f] ring-1 ring-neutral-700 rounded-md max-w-lg w-full p-5 pr-12 space-y-3"
+      {/* Sheet — full-bleed on mobile, centered max-w-2xl card on desktop. */}
+      <div
+        className="relative noir-grain w-full sm:max-w-2xl sm:rounded-sm sm:border sm:border-[rgba(232,225,211,0.14)] sm:overflow-hidden sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
+        style={{ background: "var(--bg)" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Top-right action row: pin star + close × — same size, same row */}
-        <div className="absolute top-2 right-2 flex items-center gap-2">
-          {(reveal.kind === "evidence" || reveal.kind === "fact") && (
+      {/* Top action row: breadcrumb left, star + close (38×38 squares) right.
+          Absolute (anchored to sheet) so on desktop it sits at the top of
+          the centered card, not the viewport. */}
+      <div
+        className="absolute inset-x-0 z-[2] flex justify-between items-center"
+        style={{ top: 0, padding: "20px 18px 0" }}
+      >
+        <div
+          className="font-elite uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.5)" }}
+        >
+          {breadcrumb}
+        </div>
+        <div className="flex" style={{ gap: 10 }}>
+          {(isEvidence || isFact) && (
             <button
               type="button"
               onClick={() => (isPinned ? unpinImportant(reveal.id) : pinImportant(reveal.id))}
-              aria-label={isPinned ? "Unpin" : "Pin as important"}
-              className={`w-9 h-9 rounded-full ring-1 flex items-center justify-center text-lg leading-none transition ${
-                isPinned
-                  ? "bg-[var(--accent)]/90 ring-[var(--accent)]/50 text-white shadow-[0_0_18px_rgba(244,63,94,0.55)]"
-                  : "bg-transparent ring-[var(--accent)]/60 text-[var(--accent)] hover:bg-[var(--accent)]/30 hover:text-white"
-              }`}
+              aria-label={isPinned ? "Unstar" : "Star"}
+              className="flex items-center justify-center"
+              style={{
+                width: 38,
+                height: 38,
+                background: "transparent",
+                border: `1px solid ${isPinned ? "var(--accent)" : "rgba(232,225,211,0.25)"}`,
+                color: isPinned ? "var(--accent)" : "rgba(232,225,211,0.7)",
+              }}
             >
-              {isPinned ? "★" : "☆"}
+              <Star size={16} strokeWidth={1.4} className={isPinned ? "fill-current" : ""} />
             </button>
           )}
           <button
-            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-9 h-9 rounded-full bg-black/40 ring-1 ring-neutral-700 hover:bg-neutral-900 hover:ring-neutral-500 text-neutral-400 hover:text-white flex items-center justify-center text-xl leading-none"
+            className="flex items-center justify-center"
+            style={{
+              width: 38,
+              height: 38,
+              background: "transparent",
+              border: "1px solid rgba(232,225,211,0.25)",
+              color: "rgba(232,225,211,0.85)",
+            }}
           >
-            ×
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M2 2l10 10M12 2L2 12"
+                stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+              />
+            </svg>
           </button>
         </div>
+      </div>
 
-        {reveal.kind === "evidence" && (
-          <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-[var(--accent)]">
-              Evidence · added to casebook
-            </p>
-            <h2 className="font-fell text-xl text-neutral-100">{reveal.name}</h2>
-            <p className="text-sm text-neutral-300">{reveal.significance}</p>
-          </>
+      {imageSrc && (
+        <div className="relative w-full h-[40vh] noir-vignette">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageSrc}
+            alt={isEvidence ? reveal.name : ""}
+            className="w-full h-full object-cover"
+            onError={() => setImgFailed(true)}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black" />
+        </div>
+      )}
+
+      <motion.div
+        className="max-w-2xl mx-auto relative"
+        style={{ padding: imageSrc ? "26px 22px 60px" : "110px 22px 60px" }}
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div
+          className="font-elite uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.32em", color: "rgba(232,225,211,0.45)" }}
+        >
+          {typeTag}
+        </div>
+
+        <h1
+          className="font-fell"
+          style={{
+            fontSize: isEvidence ? 30 : 22,
+            fontWeight: 600,
+            letterSpacing: "0.01em",
+            margin: "10px 0 0",
+            lineHeight: 1.2,
+            color: "var(--fg)",
+          }}
+        >
+          {title}
+        </h1>
+
+        {/* 22×1 oxblood rule */}
+        <div style={{ width: 22, height: 1, background: "var(--accent)", marginTop: 16 }} />
+
+        {isEvidence && reveal.significance && (
+          <p
+            style={{
+              fontSize: 15.5,
+              lineHeight: 1.55,
+              color: "rgba(232,225,211,0.88)",
+              marginTop: 18,
+            }}
+          >
+            {reveal.significance}
+          </p>
         )}
-        {reveal.kind === "fact" && (
-          <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-amber-300">
-              You note
-            </p>
-            <p className="text-base text-neutral-100">{reveal.text}</p>
-          </>
-        )}
-        {reveal.kind === "info" && (
-          <>
-            <p className="font-elite text-[10px] uppercase tracking-[0.3em] text-neutral-500">
-              Observation
-            </p>
-            <p className="text-base text-neutral-200">{reveal.text}</p>
-          </>
+
+        {isEvidence && (
+          <p
+            className="font-elite uppercase"
+            style={{
+              marginTop: 24,
+              fontSize: 9,
+              letterSpacing: "0.32em",
+              color: "var(--accent)",
+            }}
+          >
+            ✓ added to casebook
+          </p>
         )}
       </motion.div>
       </div>
@@ -411,9 +553,75 @@ function BriefingModal({
   briefing,
   onClose,
 }: {
-  briefing: { narrator_script: string; key_facts: string[]; your_task: string };
+  briefing: {
+    narrator_script: string;
+    key_facts: string[];
+    your_task: string;
+    video?: string;
+    auto_discover_evidence?: string[];
+  };
   onClose: () => void;
 }) {
+  // Video-first briefing: the duty officer's MP4 plays full-screen. When
+  // it ends (or the player closes), the evidence the officer named is
+  // marked as discovered (handled by the parent's onClose).
+  if (briefing.video) {
+    return (
+      <motion.div
+        className="fixed inset-0 z-[55] flex items-center justify-center"
+        style={{ background: "#000" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          src={briefing.video}
+          autoPlay
+          playsInline
+          controls
+          onEnded={onClose}
+          className="max-w-full max-h-full"
+          style={{ background: "#000" }}
+        />
+        <button
+          onClick={onClose}
+          aria-label="Close briefing"
+          className="fixed flex items-center justify-center"
+          style={{
+            top: 18,
+            right: 18,
+            width: 38,
+            height: 38,
+            background: "rgba(8,6,4,0.85)",
+            border: "1px solid rgba(232,225,211,0.25)",
+            color: "rgba(232,225,211,0.85)",
+            zIndex: 56,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+        <div
+          className="font-elite uppercase fixed"
+          style={{
+            top: 22,
+            left: 18,
+            fontSize: 9,
+            letterSpacing: "0.32em",
+            color: "rgba(232,225,211,0.55)",
+            zIndex: 56,
+          }}
+        >
+          {"// Duty officer briefing"}
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Legacy text fallback for any future location whose briefing has no
+  // video — keep the prose modal so we don't regress that path.
   return (
     <motion.div
       className="fixed inset-0 z-50 bg-black/85 overflow-y-auto"

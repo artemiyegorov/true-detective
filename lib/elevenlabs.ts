@@ -45,15 +45,71 @@ export function voiceSettingsFor(mood: Mood | string): VoiceSettings {
   return { ...base, use_speaker_boost: true };
 }
 
+// Strip leading stage-direction prose ("Long pause.", "Sighs, ...",
+// "Shifts in chair, voice quieter.") that NPCs sometimes leak into
+// voice_text despite the system rule telling them not to. We chip them
+// off iteratively so a stack like "Long pause. Sighs deeply. ..." gets
+// fully removed. Patterns are constrained to a known vocab so we don't
+// accidentally truncate real spoken sentences.
+const STAGE_DIRECTION_PREFIX = new RegExp(
+  "^\\s*(?:" +
+    [
+      // Pause / silence beats
+      "long\\s+pause",
+      "pause",
+      "beat",
+      "long\\s+silence",
+      "silence",
+      // Vocal beats
+      "sighs(?:\\s+(?:deeply|softly|heavily))?",
+      "exhales(?:\\s+(?:slowly|sharply))?",
+      "inhales(?:\\s+sharply)?",
+      "whispers",
+      "murmurs",
+      "quietly",
+      "softly",
+      // Body beats
+      "shifts(?:\\s+in\\s+(?:chair|seat))?",
+      "leans\\s+(?:back|forward)",
+      "looks\\s+(?:up|down|away|at\\s+(?:hands|thumbnail|me|the\\s+detective)(?:\\s+slowly)?)",
+      "picks\\s+at(?:\\s+thumbnail)?",
+      "rubs\\s+(?:eyes|temple|forehead)",
+      // Voice descriptors
+      "voice\\s+(?:quieter|tightens|cracks|softer|hardens|breaks)",
+      // Affect descriptors
+      "nervous\\s+(?:laugh|chuckle)",
+      "long\\s+exhale",
+    ].join("|") +
+    ")\\s*[.,—–\\-]\\s*",
+  "i",
+);
+
+function stripStageDirections(text: string): string {
+  let prev: string;
+  let out = text;
+  do {
+    prev = out;
+    out = out.replace(STAGE_DIRECTION_PREFIX, "");
+  } while (out !== prev);
+  return out;
+}
+
 export function cleanForDisplay(voiceText: string): string {
-  return voiceText.replace(/\[[^\]]+\]/g, "").trim();
+  // Order: drop bracketed ElevenLabs tags first, then chip prose stage
+  // directions, then trim.
+  return stripStageDirections(
+    voiceText.replace(/\[[^\]]+\]/g, ""),
+  ).trim();
 }
 
 export function stripTagsForTts(voiceText: string): string {
-  return voiceText
-    .replace(/\[[^\]]+\]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  // For TTS we also remove prose stage directions so they aren't read
+  // out as literal text by the voice model.
+  return stripStageDirections(
+    voiceText
+      .replace(/\[[^\]]+\]/g, " ")
+      .replace(/\s+/g, " "),
+  ).trim();
 }
 
 export async function generateVoice(params: {

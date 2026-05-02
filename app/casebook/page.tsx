@@ -12,6 +12,13 @@ export default async function CasebookPage() {
       significance: e.significance,
       foundAt: e.found_at?.split(":")[0],
       image: e.image,
+      labTests: e.lab_tests?.map(t => ({
+        id: t.id,
+        label: t.label,
+        kind: t.kind,
+        matches: t.matches,
+        no_match_text: t.no_match_text,
+      })),
     };
   }
   const factsById: Record<string, string> = {};

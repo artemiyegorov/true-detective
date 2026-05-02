@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { loadCase } from "@/lib/case";
+import Onboarding from "./Onboarding";
+import CaseProgressActions from "./CaseProgressActions";
 
 // === Cases — newspaper-style home ===
 //
@@ -41,9 +43,9 @@ export default async function Home() {
     headline: ground.meta.title,
     log: ground.briefing.opening_scene,
     dateline: "Millbrook — 14 Mar",
-    progress: 0,
     cover: "desk" as const,
     coverImage: "/bakery.png",
+    totalEvidence: ground.evidence.length,
   };
 
   return (
@@ -51,6 +53,9 @@ export default async function Home() {
       className="min-h-screen relative noir-grain"
       style={{ background: "var(--bg)", color: "var(--fg)" }}
     >
+      {/* First-launch onboarding overlay. Self-gates on a player-state
+          flag so it appears once per fresh investigation. */}
+      <Onboarding />
       <div className="max-w-xl mx-auto px-[18px] pt-1 pb-32 relative z-[1]">
         {/* Masthead — hero image */}
         <div
@@ -120,13 +125,13 @@ type CurrentData = {
   headline: string;
   log: string;
   dateline: string;
-  progress: number;
   cover: "desk" | "train" | "fire";
   coverImage?: string;
+  totalEvidence: number;
 };
 
 function CurrentStory({ data }: { data: CurrentData }) {
-  const { id, kicker, headline, log, dateline, progress, cover, coverImage } = data;
+  const { id, kicker, headline, log, dateline, cover, coverImage, totalEvidence } = data;
   return (
     <article>
       <div
@@ -149,27 +154,29 @@ function CurrentStory({ data }: { data: CurrentData }) {
         <span style={{ color: "rgba(232,225,211,0.45)" }}>FILE {id}</span>
       </div>
 
-      <h2
-        className="font-fell whitespace-pre-line"
-        style={{
-          fontWeight: 700,
-          fontSize: 28,
-          lineHeight: 1.05,
-          letterSpacing: "0.005em",
-          margin: "12px 0 0",
-          color: "var(--fg)",
-        }}
-      >
-        {headline}
-      </h2>
+      <Link href="/board" className="block" style={{ textDecoration: "none" }}>
+        <h2
+          className="font-fell whitespace-pre-line"
+          style={{
+            fontWeight: 700,
+            fontSize: 28,
+            lineHeight: 1.05,
+            letterSpacing: "0.005em",
+            margin: "12px 0 0",
+            color: "var(--fg)",
+          }}
+        >
+          {headline}
+        </h2>
+      </Link>
 
-      <div className="mt-[14px]">
+      <Link href="/board" className="block mt-[14px]">
         {coverImage ? (
           <CoverPhoto src={coverImage} alt={headline} aspect="16/10" />
         ) : (
           <CoverPlaceholder kind={cover} aspect="16/10" status="in-progress" />
         )}
-      </div>
+      </Link>
 
       <div
         className="font-elite uppercase mt-[14px]"
@@ -193,47 +200,7 @@ function CurrentStory({ data }: { data: CurrentData }) {
         {log}
       </p>
 
-      <div className="mt-[14px] flex items-center gap-[10px]">
-        <div
-          className="flex-1 overflow-hidden"
-          style={{ height: 2, background: "rgba(232,225,211,0.1)" }}
-        >
-          <div
-            style={{
-              width: `${progress}%`,
-              height: "100%",
-              background: "var(--accent)",
-            }}
-          />
-        </div>
-        <div
-          className="font-elite uppercase text-right"
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.18em",
-            color: "var(--accent)",
-            minWidth: 40,
-          }}
-        >
-          {progress}%
-        </div>
-      </div>
-
-      <Link
-        href="/board"
-        className="block text-center mt-4 w-full font-elite uppercase"
-        style={{
-          padding: "12px 14px",
-          background: "transparent",
-          border: "1px solid rgba(232,225,211,0.35)",
-          color: "var(--fg)",
-          fontSize: 11,
-          letterSpacing: "0.32em",
-          fontWeight: 500,
-        }}
-      >
-        Resume Investigation
-      </Link>
+      <CaseProgressActions totalEvidence={totalEvidence} />
     </article>
   );
 }

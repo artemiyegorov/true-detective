@@ -13,6 +13,9 @@ export type BoardNode = {
   visible: (s: PlayerState) => boolean;
   /** for clue nodes — case evidence id; for person nodes — chat npc id; for locations — case loc id */
   refId?: string;
+  /** click target — `/chat/<npc>` or `/location/<loc>`. Clue nodes open
+      the in-board dossier instead of routing. */
+  href?: string;
   /** image path for the card (people: portrait jpg; locations: optional bg) */
   image?: string;
   /** static role / one-line dossier line (people only) */
@@ -28,22 +31,39 @@ export type BoardEdge = {
   /** edge appears once both endpoints are visible (default true) */
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ALWAYS = (_s: PlayerState) => true;
+void ALWAYS; // referenced by some node defs below; kept around even when unused
 
 const has = <T>(arr: T[], v: T) => arr.includes(v);
 
 // === People ===
 //
-// Stricter progression per gameplay design:
-//   • initial board: only the crime scene (loc_backroom) is visible
-//   • visiting backroom triggers the briefing → unlocks Margaret, David,
-//     Martin and the bakery front
-//   • talking to Martin unlocks Sarah
-//   • talking to David unlocks Tyler, Eleanor and the Cole house
-//   • everything else gates on later discoveries
+// Stricter progression per gameplay design: things appear ONLY when an
+// NPC actually names them in dialogue. Each unlockable_action in a prompt
+// emits a marker into state.revealed_info (e.g. "names_sarah",
+// "names_tom", "mentions_cole_house"). We watch revealedByNpc for those
+// markers — opening the chat page alone does NOT unlock anything.
 
 const VISITED_BACKROOM = (s: PlayerState) => has(s.visitedLocations, "loc_backroom");
+// MET / mentionedBy are kept as escape hatches for future visibility
+// rules that need to gate on a specific NPC. Currently the global
+// `mentioned()` covers every active rule.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MET = (npc: string) => (s: PlayerState) => has(s.metNpcs, npc);
+// True if any NPC has emitted the given reveal marker. Use this for
+// "in-conversation" gates: e.g. mentioned("names_sarah") flips when
+// Martin or David actually says Sarah's name.
+const mentioned = (marker: string) => (s: PlayerState) => {
+  for (const list of Object.values(s.revealedByNpc)) {
+    if (list && list.includes(marker)) return true;
+  }
+  return false;
+};
+// Same, but scoped to a specific NPC.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const mentionedBy = (npc: string, marker: string) => (s: PlayerState) =>
+  (s.revealedByNpc[npc] ?? []).includes(marker);
 
 const people: BoardNode[] = [
   {
@@ -64,9 +84,12 @@ const people: BoardNode[] = [
     refId: "david",
     href: "/chat/david",
     image: "/portraits/david-default.jpg",
-    visible: VISITED_BACKROOM,
+    // David appears only after Martin or Sarah actually names him as the
+    // husband — opening their chat page is not enough; the marker fires
+    // from the NPC's `name_*` unlockable_action in dialogue.
+    visible: mentioned("names_david"),
     role: "Husband · 58 · Co-owner of the bakery",
-    hint: "Grieving. At the scene Monday morning.",
+    hint: "Grieving. Mentioned by Martin or Sarah.",
   },
   {
     id: "p:martin",
@@ -88,16 +111,11 @@ const people: BoardNode[] = [
     refId: "tom",
     href: "/chat/tom",
     image: "/portraits/tom-warm.jpg",
-    // Tom isn't on the board on day one — he comes in once a person
-    // mentions him or evidence ties him to the case (the cell log is the
-    // natural anchor since it traces a number to his name).
-    visible: s =>
-      MET("david")(s) ||
-      MET("martin")(s) ||
-      has(s.discoveredEvidence, "ev_margaret_cell_log_tom") ||
-      has(s.discoveredEvidence, "ev_partial_footprint_size_11"),
+    // Tom only goes on the board once Sarah or David actually says "Tom
+    // Brennan" in dialogue (their `names_tom` reveal marker fires).
+    visible: mentioned("names_tom"),
     role: "Family friend · 52 · Real estate broker",
-    hint: "Brought coffee and condolences Monday morning.",
+    hint: "Mentioned by Sarah or David.",
   },
   {
     id: "p:sarah",
@@ -107,12 +125,11 @@ const people: BoardNode[] = [
     refId: "sarah",
     href: "/chat/sarah",
     image: "/portraits/sarah-calm.jpg",
-    visible: s =>
-      MET("martin")(s) ||
-      MET("david")(s) ||
-      has(s.discoveredEvidence, "ev_margaret_note"),
+    // Sarah only shows up after Martin or David actually names her in
+    // dialogue (their `names_sarah` marker fires).
+    visible: mentioned("names_sarah"),
     role: "Business partner · 41 · 3 years at the bakery",
-    hint: "Margaret's partner. Mentioned by Martin / David / her own note.",
+    hint: "Margaret's partner. Mentioned by Martin or David.",
   },
   {
     id: "p:tyler",
@@ -123,8 +140,8 @@ const people: BoardNode[] = [
     href: "/chat/tyler",
     image: "/portraits/tyler-default.jpg",
     role: "Son · 16 · At a sleepover Sunday night",
-    visible: s => MET("david")(s) || has(s.visitedLocations, "loc_cole_house"),
-    hint: "Was at Jake Morrison's. Ironclad alibi.",
+    visible: mentioned("names_tyler"),
+    hint: "Was at Jake Morrison's. Mentioned by David.",
   },
   {
     id: "p:eleanor",
@@ -135,7 +152,7 @@ const people: BoardNode[] = [
     href: "/chat/eleanor",
     image: "/portraits/eleanor-default.jpg",
     role: "Neighbor · ~80 · Watches the street from her porch",
-    visible: s => MET("david")(s) || has(s.visitedLocations, "loc_cole_house"),
+    visible: s => mentioned("names_eleanor")(s) || has(s.visitedLocations, "loc_cole_house"),
     hint: "Unreliable witness — real and confused memories mixed.",
   },
   {
@@ -147,8 +164,8 @@ const people: BoardNode[] = [
     href: "/chat/daniel",
     image: "/portraits/daniel-default.jpg",
     role: "Sarah's brother · gambling debts",
-    visible: s => MET("sarah")(s) || MET("eleanor")(s),
-    hint: "Was nearby Sunday night per Mrs. Carrington's testimony.",
+    visible: mentioned("names_daniel"),
+    hint: "Was nearby Sunday night. Mentioned by Sarah or Eleanor.",
   },
   {
     id: "p:kevin",
@@ -200,8 +217,8 @@ const locations: BoardNode[] = [
     href: "/location/loc_cole_house",
     image: "/cole-house.png",
     role: "The Coles' house · upstairs is Tyler's room",
-    visible: s => MET("david")(s),
-    hint: "Where David and Tyler live.",
+    visible: mentioned("mentions_cole_house"),
+    hint: "Where David and Tyler live. Mentioned by David or Eleanor.",
   },
   {
     id: "l:olive_bar",
@@ -212,7 +229,7 @@ const locations: BoardNode[] = [
     href: "/location/loc_olive_bar",
     image: "/olive-bar.png",
     role: "Bar on Olive Street · Kevin tends",
-    visible: s => has(s.unlockedLocations, "loc_olive_bar"),
+    visible: s => mentioned("mentions_olive_bar")(s) || has(s.unlockedLocations, "loc_olive_bar"),
     hint: "Sarah was here Sunday night.",
   },
   {
@@ -224,7 +241,11 @@ const locations: BoardNode[] = [
     href: "/location/loc_brennan_office",
     image: "/toms-office.png",
     role: "Tom's office · Mill Creek runs behind",
-    visible: s => has(s.unlockedLocations, "loc_brennan_office"),
+    // Appears as soon as anyone (typically Tom himself) names his office
+    // / Brennan Real Estate in dialogue. The legacy `unlockedLocations`
+    // path is kept as a fallback for any dialogue-route keyword unlocks
+    // configured in the case JSON.
+    visible: s => mentioned("mentions_brennan_office")(s) || has(s.unlockedLocations, "loc_brennan_office"),
     hint: "Tom's office. Mill Creek runs behind it.",
   },
 ];
@@ -257,8 +278,9 @@ const clueDefs: ClueDef[] = [
   { id: "c:linda_divorce", evId: "ev_linda_divorce_filing", label: "Linda's divorce filing", x: 78, y: 14 },
   { id: "c:tom_key", evId: "ev_tom_old_key", label: "Tom's old bakery key", x: 88, y: 20 },
   { id: "c:cam_glimpse", evId: "ev_security_camera_glimpse", label: "Camera @ 23:38", x: 78, y: 72 },
-  { id: "c:weapon_creek", evId: "ev_paperweight_in_creek", label: "Paperweight in creek", x: 96, y: 86 },
-  { id: "c:dna_weapon", evId: "ev_dna_paperweight", label: "DNA on paperweight", x: 96, y: 78 },
+  { id: "c:dna_match_tom", evId: "ev_dna_match_tom", label: "DNA match: Tom", x: 96, y: 78 },
+  { id: "c:dna_match_daniel", evId: "ev_dna_match_daniel", label: "DNA match: Daniel", x: 30, y: 78 },
+  { id: "c:weapon_recovered", evId: "ev_paperweight_recovered", label: "Weapon recovered", x: 96, y: 86 },
   { id: "c:eleanor_daniel", evId: "ev_eleanor_witness_daniel", label: "Daniel @ 21:45", x: 14, y: 70 },
   { id: "c:eleanor_car", evId: "ev_eleanor_witness_car", label: "Fancy car @ 23:30", x: 6, y: 50 },
   { id: "c:eleanor_helen", evId: "ev_eleanor_witness_helen", label: "Helen visiting David", x: 14, y: 50 },
@@ -302,8 +324,10 @@ export const BOARD_EDGES: BoardEdge[] = [
   { from: "p:kevin", to: "l:olive_bar" },
   { from: "p:tom", to: "l:brennan_office" },
 
-  // clue → person / location it implicates or originates from
-  { from: "c:margaret_note", to: "p:sarah" },
+  // clue → person / location it implicates or originates from. Margaret's
+  // note ("S — 47k") is intentionally NOT linked to Sarah here — the
+  // initial 'S' is ambiguous to the detective until someone names Sarah
+  // for them (Martin during interview, etc).
   { from: "c:footprint_44", to: "p:sarah" },
   { from: "c:bar_receipt", to: "p:sarah" },
   { from: "c:bank", to: "p:sarah" },
@@ -313,14 +337,18 @@ export const BOARD_EDGES: BoardEdge[] = [
   { from: "c:linda_divorce", to: "p:tom" },
   { from: "c:tom_key", to: "p:tom" },
   { from: "c:cam_glimpse", to: "p:tom" },
-  { from: "c:weapon_creek", to: "p:tom" },
-  { from: "c:dna_weapon", to: "p:tom" },
+  { from: "c:dna_match_tom", to: "p:tom" },
+  { from: "c:weapon_recovered", to: "p:tom" },
   { from: "c:phone_log", to: "p:david" },
-  { from: "c:dna_door", to: "p:daniel" },
+  // The raw `ev_dna_door_handle` clue is NOT linked directly to any
+  // suspect — the unknown profiles are anonymous until the lab does the
+  // match. Daniel/Tom only get an edge once their per-suspect lab-match
+  // evidence (ev_dna_match_*) is unlocked.
+  { from: "c:dna_match_daniel", to: "p:daniel" },
   { from: "c:eleanor_daniel", to: "p:daniel" },
   { from: "c:eleanor_car", to: "p:tom" },
   { from: "c:eleanor_helen", to: "p:david" },
-  { from: "c:weapon_creek", to: "l:brennan_office" },
+  { from: "c:weapon_recovered", to: "l:brennan_office" },
   { from: "c:tom_key", to: "l:brennan_office" },
 ];
 

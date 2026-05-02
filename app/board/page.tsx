@@ -21,6 +21,7 @@ export default async function BoardPage() {
         evidenceById={evidenceById}
         factsById={factsById}
         caseTitle={ground.meta.title}
+        groundTruth={ground.ground_truth}
       />
     </main>
   );
