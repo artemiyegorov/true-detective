@@ -122,16 +122,17 @@ export default function LocationView({
   // bare list (no tag pills) — the grouping just shapes layout sections.
   const peopleHotspots = hotspots.filter(h => h.leads_to_npc);
   const exitHotspots = hotspots.filter(h => h.leads_to_location);
-  // "Around you" only lists interactive objects the player hasn't yet
-  // surfaced. Once a hotspot's reveal lands in discoveredEvidence /
-  // discoveredFacts it's redundant with "Clues from this location" above,
-  // so we drop it from the list to keep the scene compact.
+  // "Around you" only filters out evidence-revealing hotspots once the
+  // evidence is in the casebook (it's shown in "Clues from this location"
+  // above). Fact-revealing hotspots stay in the list — facts have no
+  // secondary surface, so dropping them would erase observations like
+  // "register untouched → not a robbery" the moment the player clicks
+  // them. The button renders with a `discovered` flag instead.
   const objectHotspots = hotspots.filter(h => {
     if (h.leads_to_npc || h.leads_to_location) return false;
     const r = h.reveals;
     if (!r) return true;
     if (r.type === "evidence" && state.discoveredEvidence.includes(r.id)) return false;
-    if (r.type === "fact" && state.discoveredFacts.includes(r.id)) return false;
     return true;
   });
 
