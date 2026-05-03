@@ -51,36 +51,46 @@ export function voiceSettingsFor(mood: Mood | string): VoiceSettings {
 // off iteratively so a stack like "Long pause. Sighs deeply. ..." gets
 // fully removed. Patterns are constrained to a known vocab so we don't
 // accidentally truncate real spoken sentences.
+// Adjectives commonly bolted onto pause/silence/exhale/breath/inhale.
+// Generic enough that we accept any of them in front of those nouns
+// (e.g. "Nervous pause.", "Tense silence.", "Heavy exhale.", "Sad
+// laugh.", "Awkward beat.").
+const PAUSE_ADJ =
+  "(?:long|short|brief|nervous|tense|awkward|heavy|deep|quiet|silent|sad|uneasy|uncomfortable|stunned|cold|sharp|slow|small|tight)";
+const PAUSE_NOUN = "(?:pause|silence|beat|breath|exhale|inhale|sigh|moment)";
+
 const STAGE_DIRECTION_PREFIX = new RegExp(
   "^\\s*(?:" +
     [
-      // Pause / silence beats
-      "long\\s+pause",
-      "pause",
-      "beat",
-      "long\\s+silence",
-      "silence",
-      // Vocal beats
-      "sighs(?:\\s+(?:deeply|softly|heavily))?",
-      "exhales(?:\\s+(?:slowly|sharply))?",
-      "inhales(?:\\s+sharply)?",
-      "whispers",
-      "murmurs",
+      // Pause / silence beats — `Pause.`, `Long pause,`, `Nervous pause —`
+      `${PAUSE_ADJ}\\s+${PAUSE_NOUN}`,
+      PAUSE_NOUN,
+      // Vocal beats — `Sighs.`, `Sighs deeply,`
+      "(?:sigh|sighs)(?:\\s+(?:deeply|softly|heavily|quietly))?",
+      "(?:exhale|exhales)(?:\\s+(?:slowly|sharply))?",
+      "(?:inhale|inhales)(?:\\s+sharply)?",
+      "whispers?",
+      "murmurs?",
+      "stammers?",
+      "swallows?(?:\\s+hard)?",
+      "clears\\s+(?:his|her|their)?\\s*throat",
+      "hesitates?",
       "quietly",
       "softly",
-      // Body beats
+      // Body beats — `Shifts in chair,`
       "shifts(?:\\s+in\\s+(?:chair|seat))?",
-      "leans\\s+(?:back|forward)",
-      "looks\\s+(?:up|down|away|at\\s+(?:hands|thumbnail|me|the\\s+detective)(?:\\s+slowly)?)",
-      "picks\\s+at(?:\\s+thumbnail)?",
-      "rubs\\s+(?:eyes|temple|forehead)",
-      // Voice descriptors
-      "voice\\s+(?:quieter|tightens|cracks|softer|hardens|breaks)",
-      // Affect descriptors
-      "nervous\\s+(?:laugh|chuckle)",
-      "long\\s+exhale",
+      "leans?\\s+(?:back|forward)",
+      "looks?\\s+(?:up|down|away|at\\s+\\w+(?:\\s+\\w+)?(?:\\s+slowly)?)",
+      "picks?\\s+at(?:\\s+\\w+)?",
+      "rubs?\\s+(?:eyes|temple|forehead)",
+      "fidgets?",
+      // Voice / face descriptors — `Voice quieter,`
+      "voice\\s+(?:quieter|tightens|cracks|softer|hardens|breaks|drops|trails\\s+off)",
+      "(?:eyes|jaw|hands?)\\s+(?:tighten|harden|clench|drop|lower)",
+      // Affect descriptors — `Nervous laugh.` `Sad smile.`
+      `${PAUSE_ADJ}\\s+(?:laugh|chuckle|smile|nod|shake|shrug)`,
     ].join("|") +
-    ")\\s*[.,—–\\-]\\s*",
+    ")\\s*[.,—–\\-:]\\s*",
   "i",
 );
 
