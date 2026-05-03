@@ -362,18 +362,46 @@ function ObjectButton({
   discovered: boolean;
   onClick: () => void;
 }) {
+  // Clue / hotspot tile in the Around-you and Clues-from-this-location
+  // sections. Sharp-rectangle look matching the rest of Blackfile —
+  // hairline border, oxblood accent rail on the left when discovered,
+  // no rounded corners.
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`w-full text-left px-4 py-3 rounded-md ring-1 transition flex items-center gap-3 ${
-        discovered
-          ? "bg-[#0f1018] ring-neutral-900 text-neutral-500 hover:ring-neutral-700"
-          : "bg-[#15161f] ring-neutral-800 text-neutral-100 hover:bg-[#1a1c25] hover:ring-neutral-700"
-      }`}
+      className="relative w-full text-left transition flex items-center gap-3"
+      style={{
+        padding: "14px 14px 14px 18px",
+        background: discovered ? "rgba(232,225,211,0.025)" : "rgba(232,225,211,0.04)",
+        border: "1px solid rgba(232,225,211,0.08)",
+        color: discovered ? "rgba(232,225,211,0.55)" : "var(--fg)",
+      }}
     >
-      <span className="text-base flex-1">{label}</span>
+      <span
+        className="absolute"
+        style={{
+          left: 0,
+          top: 10,
+          bottom: 10,
+          width: 3,
+          background: discovered ? "var(--accent)" : "rgba(168,57,46,0.5)",
+        }}
+      />
+      <span className="font-fell flex-1" style={{ fontSize: 15.5, lineHeight: 1.3 }}>
+        {label}
+      </span>
       {discovered && (
-        <span className="font-elite text-[9px] uppercase tracking-wider text-emerald-600/80">noted</span>
+        <span
+          className="font-elite uppercase"
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.24em",
+            color: "var(--accent)",
+          }}
+        >
+          noted
+        </span>
       )}
     </button>
   );
@@ -632,7 +660,7 @@ function BriefingModal({
     >
       <div className="min-h-full flex items-start sm:items-center justify-center p-4 py-12">
       <motion.div
-        className="bg-[#15161f] ring-1 ring-amber-700/40 rounded-md max-w-xl w-full p-6 space-y-4"
+        className="bg-[#15161f] ring-1 ring-amber-700/40 max-w-xl w-full p-6 space-y-4"
         initial={{ scale: 0.92, y: 12 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.92, y: 12 }}

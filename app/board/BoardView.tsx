@@ -1124,7 +1124,7 @@ function ImportantPanel({
         ) : (
           <ul className="space-y-3">
             {items.map(item => (
-              <li key={item.id} className="rounded-md ring-1 ring-[var(--accent)]/50 p-3 bg-[#15161f]">
+              <li key={item.id} className="ring-1 ring-[var(--accent)]/50 p-3 bg-[#15161f]">
                 <p className="font-elite text-[10px] uppercase tracking-[0.25em] text-[var(--accent)]">
                   Pinned
                 </p>
