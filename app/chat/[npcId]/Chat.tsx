@@ -497,16 +497,27 @@ export default function Chat({
       // interrogation in a centered max-w-2xl "screen" with the surrounding
       // viewport falling back to --bg, so the page reads as a contained
       // recording on a desk rather than a full-bleed video.
+      // `100dvh` is the dynamic viewport height — it shrinks when iOS
+      // Safari's URL bar is visible, which `100vh` does NOT (mobile
+      // Safari treats `100vh` as the larger "no-URL-bar" measurement,
+      // pushing the talk pad below the fold). Fallback to `100vh` for
+      // older browsers via the height shorthand.
+      // h-screen here is the FALLBACK for browsers without `dvh` support;
+      // the inline `height: 100dvh` overrides it on modern browsers.
       className="relative w-full mx-auto h-screen overflow-hidden sm:max-w-2xl sm:border sm:border-[rgba(232,225,211,0.12)] sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
-      style={{ background: "var(--bg)", color: "var(--fg)" }}
+      style={{
+        background: "var(--bg)",
+        color: "var(--fg)",
+        height: "100dvh",
+      }}
     >
       {/* Portrait — full-bleed when collapsed, top band when transcript
-          open. Use vh units explicitly because the parent is min-h-screen
-          (no fixed height), so a percentage height collapses to 0. */}
+          open. Heights are in dvh so iOS Safari's collapsing URL bar
+          doesn't push the bottom controls off-screen. */}
       <div
         className="absolute inset-x-0 top-0 z-[1]"
         style={{
-          height: transcriptOpen ? "44vh" : "100vh",
+          height: transcriptOpen ? "44dvh" : "100dvh",
           transition: "height 0.3s ease",
         }}
       >
@@ -772,13 +783,15 @@ export default function Chat({
         </button>
       )}
 
-      {/* Transcript sheet — only mounted when open. */}
+      {/* Transcript sheet — only mounted when open. dvh keeps the top
+          edge aligned with the portrait band on iOS Safari (where 44vh
+          sat too high because the URL bar shrank the viewport). */}
       {transcriptOpen && (
         <div
           className="absolute inset-x-0 z-[9] flex flex-col"
           style={{
             bottom: 78,
-            top: "44vh",
+            top: "44dvh",
             background: "rgba(8,6,4,0.96)",
             borderTop: "1px solid rgba(232,225,211,0.18)",
             borderBottom: "1px solid rgba(232,225,211,0.1)",
