@@ -87,6 +87,10 @@ export default function Chat({
   const [mood, setMood] = useState<string>(INITIAL_MOODS[npcId] ?? "calm");
   const [evidencePresented, setEvidencePresented] = useState<string[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
+  // Evidence the detective has clipped to the next message. Set by the
+  // paperclip picker, cleared after send() (or manually via the chip ×).
+  // Picking an item ATTACHES it — it doesn't fire dialogue immediately.
+  const [attachedEvidenceId, setAttachedEvidenceId] = useState<string | null>(null);
   // Per design, the default view is chat-mode: transcript visible and the
   // portrait sits in a compact band on top. The player can collapse the
   // transcript to swap into voice-first / full-bleed-portrait mode.
@@ -260,15 +264,22 @@ export default function Chat({
   }, [muted]);
 
   // Send message (voice or text) → /api/dialogue → /api/tts.
+  // newEvidenceId override is for legacy callers; otherwise the function
+  // pulls the currently-attached evidence (set via the paperclip picker)
+  // and clears it after the turn fires.
   const send = useCallback(async (playerText: string, newEvidenceId?: string) => {
-    if (!playerText.trim() && !newEvidenceId) return;
+    const effectiveEvidence = newEvidenceId ?? attachedEvidenceId ?? undefined;
+    // Player needs to actually say (or type) something — attached
+    // evidence on its own is NOT a turn.
+    if (!playerText.trim()) return;
     setPending(true);
     setShowEvidencePicker(false);
+    setAttachedEvidenceId(null);
 
     const userMsg: Msg = {
       role: "user",
-      content: playerText.trim() || "(presents evidence in silence)",
-      evidenceId: newEvidenceId,
+      content: playerText.trim(),
+      evidenceId: effectiveEvidence,
       t: nowHHMM(),
     };
     const newHistory: Msg[] = [...messages, userMsg];
@@ -284,7 +295,7 @@ export default function Chat({
           npcId,
           messages: newHistory.map(m => ({ role: m.role, content: m.content })),
           evidencePresented,
-          newEvidenceId,
+          newEvidenceId: effectiveEvidence,
         }),
       });
       const dialogue = await dialogueRes.json();
@@ -296,8 +307,8 @@ export default function Chat({
 
       const newMood = dialogue.state?.mood ?? mood;
       setMood(newMood);
-      const updatedEvidence = newEvidenceId
-        ? [...evidencePresented, newEvidenceId]
+      const updatedEvidence = effectiveEvidence
+        ? [...evidencePresented, effectiveEvidence]
         : evidencePresented;
       setEvidencePresented(updatedEvidence);
 
@@ -362,7 +373,7 @@ export default function Chat({
     } finally {
       setPending(false);
     }
-  }, [evidencePresented, messages, mood, npcId, muted]);
+  }, [evidencePresented, messages, mood, npcId, muted, attachedEvidenceId]);
 
   // === Hold-to-speak ===
   // Two backends:
@@ -906,6 +917,67 @@ export default function Chat({
         </div>
       )}
 
+      {/* Attached-evidence chip — sits just above the talk pad. Tells
+          the player the evidence is queued; their next typed/voice
+          message will hand it to the NPC together with the question. */}
+      {attachedEvidenceId && (
+        <div
+          className="absolute inset-x-0 z-10 flex items-center"
+          style={{
+            // sit just above the talk pad's top border
+            bottom: 78,
+            padding: "8px 18px",
+            background: "rgba(168,57,46,0.12)",
+            borderTop: "1px solid rgba(168,57,46,0.45)",
+            gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>📎</span>
+          <span
+            className="font-elite uppercase"
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.28em",
+              color: "var(--accent)",
+              flexShrink: 0,
+            }}
+          >
+            Attached
+          </span>
+          <span
+            className="italic"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 13,
+              color: "var(--fg)",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {evidenceNameById.get(attachedEvidenceId) ?? attachedEvidenceId}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAttachedEvidenceId(null)}
+            aria-label="Remove attachment"
+            style={{
+              width: 28,
+              height: 28,
+              background: "transparent",
+              border: "1px solid rgba(232,225,211,0.25)",
+              color: "rgba(232,225,211,0.85)",
+              flexShrink: 0,
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Talk pad — bottom, always visible */}
       <div
         className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between gap-2"
@@ -1109,7 +1181,7 @@ export default function Chat({
               marginBottom: 8,
             }}
           >
-            Present evidence
+            Attach evidence to your next message
           </p>
           {presentableEvidence.length === 0 && (
             <p
@@ -1124,7 +1196,13 @@ export default function Chat({
               <button
                 key={ev.id}
                 disabled={pending || evidencePresented.includes(ev.id)}
-                onClick={() => send(input, ev.id)}
+                onClick={() => {
+                  // Attach (do NOT send). The player still needs to type
+                  // or speak something — the next send() will include
+                  // this evidence id.
+                  setAttachedEvidenceId(ev.id);
+                  setShowEvidencePicker(false);
+                }}
                 className="text-left"
                 style={{
                   fontSize: 12,
