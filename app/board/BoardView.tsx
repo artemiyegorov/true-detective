@@ -729,6 +729,10 @@ function DossierPanel({
               connectedClues={connectedClues}
               npcReveals={npcReveals}
               evidenceById={evidenceById}
+              // Persons without a chat link are non-interactive — i.e.
+              // the victim. Show a coroner-summary line instead of the
+              // generic "Talk to them or surface evidence" prompt.
+              isVictim={node.kind === "person" && !node.href}
             />
           </div>
 
@@ -1017,10 +1021,12 @@ function DossierKnown({
   connectedClues,
   npcReveals,
   evidenceById,
+  isVictim,
 }: {
   connectedClues: BoardNode[];
   npcReveals: string[];
   evidenceById: Record<string, ClueDetail>;
+  isVictim?: boolean;
 }) {
   // Reveal markers (`names_*`, `mentions_*`) are internal gating signals
   // for the board graph — they're not facts the detective "knows" about
@@ -1031,7 +1037,9 @@ function DossierKnown({
     <div>
       {!hasContent && (
         <p className="italic text-sm text-neutral-600">
-          Nothing yet. Talk to them or surface evidence.
+          {isVictim
+            ? "Blunt force trauma to the back of the head. Time of death between 23:00 and 01:00 Sunday."
+            : "Nothing yet. Talk to them or surface evidence."}
         </p>
       )}
       {connectedClues.length > 0 && (
