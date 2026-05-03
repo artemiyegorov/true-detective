@@ -359,8 +359,10 @@ function CasePanel({
         setCaseText(baseline ? `${baseline} ${combined}`.trim() : combined);
       };
       recognition.onerror = e => {
-        if (e.error === "no-speech") return;
-        setVoiceError(`Voice error: ${e.error ?? "unknown"}`);
+        const code = e.error ?? "unknown";
+        // Lifecycle noise — silently ignore (matches Chat).
+        if (code === "no-speech" || code === "aborted" || code === "network") return;
+        setVoiceError(`Voice error: ${code}`);
       };
       recognition.onend = () => undefined;
       try {

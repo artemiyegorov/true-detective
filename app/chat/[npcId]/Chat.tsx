@@ -385,7 +385,15 @@ export default function Chat({
       };
       recognition.onerror = e => {
         const code = e?.error ?? "unknown";
-        if (code === "no-speech") return;
+        // Codes that fire during the normal lifecycle (tapped without
+        // holding long enough, recognition cancelled by a second start,
+        // brief network blip) — don't surface as errors. They aren't
+        // actionable for the player and create noise.
+        if (code === "no-speech" || code === "aborted" || code === "network") {
+          // eslint-disable-next-line no-console
+          console.debug("[chat/voice] silent", code);
+          return;
+        }
         const msg =
           code === "not-allowed" || code === "service-not-allowed"
             ? "Mic permission denied. Allow microphone access for voice input."
