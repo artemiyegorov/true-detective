@@ -187,9 +187,18 @@ export default function Chat({
       // variant matches where we left off.
       const lastAssistant = [...prior].reverse().find(m => m.role === "assistant");
       if (lastAssistant?.mood) setMood(lastAssistant.mood);
+      // Re-build "already presented" set from the prior transcript so
+      // the same evidence can't be handed over twice across navigations.
+      const presented = prior
+        .map(m => m.evidenceId)
+        .filter((id): id is string => !!id);
+      if (presented.length) setEvidencePresented(Array.from(new Set(presented)));
     }
     hydratedRef.current = true;
   }, [npcId]);
+
+  // id → display-name lookup for the "📎 presented · X" label.
+  const evidenceNameById = new Map(evidenceList.map(e => [e.id, e.name]));
 
   // Autosave the transcript whenever it changes — survives navigation,
   // cleared by resetPlayerState (Reset button on /board).
@@ -871,7 +880,7 @@ export default function Chat({
                       marginBottom: 4,
                     }}
                   >
-                    📎 presented · {m.evidenceId}
+                    📎 presented · {evidenceNameById.get(m.evidenceId) ?? m.evidenceId}
                   </div>
                 )}
                 <div
