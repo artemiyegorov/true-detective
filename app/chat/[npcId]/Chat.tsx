@@ -87,7 +87,6 @@ export default function Chat({
   const [mood, setMood] = useState<string>(INITIAL_MOODS[npcId] ?? "calm");
   const [evidencePresented, setEvidencePresented] = useState<string[]>([]);
   const [showEvidencePicker, setShowEvidencePicker] = useState(false);
-  const [unlockToast, setUnlockToast] = useState<string | null>(null);
   // Per design, the default view is chat-mode: transcript visible and the
   // portrait sits in a compact band on top. The player can collapse the
   // transcript to swap into voice-first / full-bleed-portrait mode.
@@ -304,12 +303,14 @@ export default function Chat({
         },
       ]);
 
+      // Persist unlocked locations into player-state. The user-facing
+      // toast comes from the global <Notifications/> stack (it knows the
+      // human-readable names and de-dupes already-unlocked entries) — we
+      // do NOT fire a chat-local toast here. The chat-local toast used
+      // to show raw "loc_olive_bar"-style ids and pop up even when the
+      // location was already on the board, which was confusing.
       const unlocks = (dialogue.unlocked_locations as string[] | undefined) ?? [];
-      if (unlocks.length) {
-        unlocks.forEach(unlockLocation);
-        setUnlockToast(unlocks.join(", "));
-        setTimeout(() => setUnlockToast(null), 4000);
-      }
+      for (const id of unlocks) unlockLocation(id);
 
       // Evidence the NPC produced in dialogue (e.g. Kevin pulling Sarah's
       // bar receipt). Added to discoveredEvidence so it shows up in the
@@ -1132,25 +1133,6 @@ export default function Chat({
         </div>
       )}
 
-      {/* Unlock toast — kept for legacy/in-chat feedback in addition to the
-          global Notifications stack. */}
-      {unlockToast && (
-        <div
-          className="absolute z-40 font-elite uppercase"
-          style={{
-            top: 80,
-            right: 18,
-            padding: "8px 12px",
-            border: "1px solid rgba(168,57,46,0.6)",
-            background: "rgba(8,6,4,0.85)",
-            color: "var(--accent)",
-            fontSize: 10,
-            letterSpacing: "0.28em",
-          }}
-        >
-          🗺 Location unlocked: {unlockToast}
-        </div>
-      )}
 
       {/* Voice-input error banner — surfaces mic permission denied,
           unsupported browser, etc. so the player isn't left wondering why
