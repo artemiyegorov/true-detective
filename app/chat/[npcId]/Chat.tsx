@@ -179,6 +179,27 @@ export default function Chat({
     };
   }, []);
 
+  // Keyboard-aware viewport height. On iOS Safari, `100dvh` does NOT
+  // shrink when the soft keyboard opens (only the visual viewport
+  // does), so the chat root keeps its full height and the talk pad
+  // sits below the fold with empty space underneath. VisualViewport
+  // gives us the actually-visible area; we mirror it into a CSS
+  // variable that the chat root reads.
+  const [vvHeight, setVvHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setVvHeight(vv.height);
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
   // Hydrate the transcript from persisted state on mount. We track
   // hydration with a ref so the autosave effect below doesn't immediately
   // clobber prior history with the empty initial messages array.
@@ -553,15 +574,15 @@ export default function Chat({
       // older browsers via the height shorthand.
       // The chat is pinned to the viewport — no body scrolling, no
       // pull-to-refresh, no rubber-banding. fixed inset-0 on mobile,
-      // contained-scroll desktop card. h-screen / 100dvh is the
-      // height fallback chain for browsers without dvh.
+      // contained-scroll desktop card. Height fallback chain:
+      //   visualViewport.height (preferred — keyboard-aware on iOS)
+      //   100dvh (modern non-iOS browsers, partial iOS support)
+      //   100vh (h-screen className) for legacy fallback.
       className="fixed inset-0 mx-auto sm:relative sm:w-auto sm:h-screen sm:max-w-2xl sm:border sm:border-[rgba(232,225,211,0.12)] sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)] overflow-hidden"
       style={{
         background: "var(--bg)",
         color: "var(--fg)",
-        height: "100dvh",
-        // Stop iOS rubber-band & nested scroll containers from leaking
-        // into the chat container.
+        height: vvHeight ? `${vvHeight}px` : "100dvh",
         overscrollBehavior: "contain",
       }}
     >
