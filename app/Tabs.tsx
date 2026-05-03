@@ -26,7 +26,13 @@ export default function Tabs() {
   return (
     <div
       className="fixed inset-x-0 z-30 flex justify-center pointer-events-none"
-      style={{ bottom: 0, padding: "14px 0 24px" }}
+      // Lower the dock so it sits near the bottom edge instead of
+      // floating up above the safe area. Bottom padding accounts for
+      // iOS home-indicator via env(safe-area-inset-bottom).
+      style={{
+        bottom: 0,
+        padding: "8px 0 calc(env(safe-area-inset-bottom, 0px) + 8px)",
+      }}
     >
       <div
         className="flex pointer-events-auto"

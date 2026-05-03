@@ -67,6 +67,18 @@ export default function BoardView({
     return () => window.removeEventListener("td-state-change", handler);
   }, []);
 
+  // Lock body scroll while the board is mounted — the cork wall fits the
+  // viewport, no need to scroll the page underneath. Prevents iOS rubber-
+  // band and stray scroll on mobile.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   const data = useMemo(() => {
     if (!state) return { nodes: [], edges: [], visibleIds: new Set<string>() };
     // Clues live in the Casebook, not on the board. Keep only people +
@@ -90,7 +102,13 @@ export default function BoardView({
   const importantCount = state.importantClues.length;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div
+      // Pin board to viewport on mobile (no scrolling, no rubber-band).
+      // h-screen is the fallback for browsers without `dvh`; 100dvh on
+      // top accounts for iOS Safari's collapsing URL bar.
+      className="flex flex-col h-screen overflow-hidden"
+      style={{ height: "100dvh", overscrollBehavior: "contain" }}
+    >
       {!openNode && !showImportant && <BackLink href="/" label="cases" />}
 
       {/* Header — actions only on the right; back is handled by BackLink. */}
