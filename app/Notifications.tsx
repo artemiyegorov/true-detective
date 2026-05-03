@@ -73,9 +73,12 @@ export default function Notifications({
         }
       }
 
+      // Only chattable persons count as "witnesses" — the victim
+      // (Margaret) is a person node without an href, and we don't want
+      // her landing in a "NEW WITNESS" toast.
       const currentPeople = new Set(
         visibleNodes(cur)
-          .filter(n => n.kind === "person")
+          .filter(n => n.kind === "person" && !!n.href)
           .map(n => n.id),
       );
       if (initRef.current) {

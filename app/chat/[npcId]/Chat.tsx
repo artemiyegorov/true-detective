@@ -156,6 +156,17 @@ export default function Chat({
   // the NPC actually says something in dialogue (state.revealed_info
   // markers handled below). meetNpc fires on the first reply instead.
 
+  // Lock the body while the chat is mounted so iOS Safari doesn't
+  // rubber-band the page underneath the fixed chat container.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   // Hydrate the transcript from persisted state on mount. We track
   // hydration with a ref so the autosave effect below doesn't immediately
   // clobber prior history with the empty initial messages array.
@@ -211,13 +222,13 @@ export default function Chat({
   }, [lastNpc?.content]);
 
   // Live caption auto-scroll: as the typewriter advances, keep the
-  // bottom-most line visible so long replies marquee upward instead of
-  // truncating with `…`. Only matters in collapsed mode where the band
-  // has bounded height.
+  // right-most characters in view so long replies marquee horizontally
+  // (a news-ticker effect) instead of wrapping into multiple lines.
+  // Only matters in collapsed mode where the band is single-line.
   useEffect(() => {
     const el = liveCaptionRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    el.scrollLeft = el.scrollWidth;
   }, [typed]);
 
   // Re-mute or fully stop audio when toggled on.
@@ -502,13 +513,18 @@ export default function Chat({
       // Safari treats `100vh` as the larger "no-URL-bar" measurement,
       // pushing the talk pad below the fold). Fallback to `100vh` for
       // older browsers via the height shorthand.
-      // h-screen here is the FALLBACK for browsers without `dvh` support;
-      // the inline `height: 100dvh` overrides it on modern browsers.
-      className="relative w-full mx-auto h-screen overflow-hidden sm:max-w-2xl sm:border sm:border-[rgba(232,225,211,0.12)] sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)]"
+      // The chat is pinned to the viewport — no body scrolling, no
+      // pull-to-refresh, no rubber-banding. fixed inset-0 on mobile,
+      // contained-scroll desktop card. h-screen / 100dvh is the
+      // height fallback chain for browsers without dvh.
+      className="fixed inset-0 mx-auto sm:relative sm:w-auto sm:h-screen sm:max-w-2xl sm:border sm:border-[rgba(232,225,211,0.12)] sm:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)] overflow-hidden"
       style={{
         background: "var(--bg)",
         color: "var(--fg)",
         height: "100dvh",
+        // Stop iOS rubber-band & nested scroll containers from leaking
+        // into the chat container.
+        overscrollBehavior: "contain",
       }}
     >
       {/* Portrait — full-bleed when collapsed, top band when transcript
@@ -720,18 +736,17 @@ export default function Chat({
                   lineHeight: 1.4,
                   color: "#f0e8d8",
                   textShadow: "0 1px 8px rgba(0,0,0,0.9)",
-                  // Bounded marquee window — about 3 lines. Auto-scrolls
-                  // bottom-most as the typewriter advances (see effect
-                  // tied to `typed`), so long replies stream up instead
-                  // of clipping with an ellipsis.
-                  maxHeight: "calc(15px * 1.4 * 3)",
+                  // Single-line ticker. The full text scrolls left as
+                  // the typewriter advances (see effect tied to `typed`).
+                  // No clamp — long replies stream sideways like news
+                  // captions instead of wrapping into multiple lines.
+                  whiteSpace: "nowrap",
                   overflow: "hidden",
-                  // Top fade so the line scrolling out doesn't just hard-
-                  // clip — softens the marquee edge.
+                  // Soft fade on both edges so characters don't hard-cut.
                   WebkitMaskImage:
-                    "linear-gradient(180deg, transparent 0%, #000 28%, #000 100%)",
+                    "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)",
                   maskImage:
-                    "linear-gradient(180deg, transparent 0%, #000 28%, #000 100%)",
+                    "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)",
                 }}
               >
                 “{typed}
@@ -918,7 +933,10 @@ export default function Chat({
                 paddingLeft: 12,
                 paddingRight: 4,
                 height: 40,
-                fontSize: 14,
+                // 16px is the iOS Safari threshold below which the
+                // browser auto-zooms into the input on focus (and never
+                // zooms back out). Keep at 16 to suppress that behavior.
+                fontSize: 16,
                 color: "var(--fg)",
                 outline: "none",
               }}
@@ -929,6 +947,7 @@ export default function Chat({
               onMouseUp={onHoldEnd}
               onTouchStart={onHoldStart}
               onTouchEnd={onHoldEnd}
+              onContextMenu={e => e.preventDefault()}
               style={{
                 width: 40,
                 height: 40,
@@ -939,6 +958,14 @@ export default function Chat({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                // iOS Safari long-press fires a context menu (Copy /
+                // Look Up) and selects nearby text. Suppress all of it
+                // so press = record, release = send, no UI noise.
+                WebkitUserSelect: "none",
+                userSelect: "none",
+                WebkitTouchCallout: "none",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
               }}
             >
               <MicGlyph />
@@ -975,6 +1002,7 @@ export default function Chat({
               onMouseUp={onHoldEnd}
               onTouchStart={onHoldStart}
               onTouchEnd={onHoldEnd}
+              onContextMenu={e => e.preventDefault()}
               disabled={pending}
               className="font-elite uppercase"
               style={{
@@ -992,6 +1020,13 @@ export default function Chat({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 12,
+                // Press = record, release = send. iOS otherwise pops a
+                // context menu / selection bubble on long-press; nuke it.
+                WebkitUserSelect: "none",
+                userSelect: "none",
+                WebkitTouchCallout: "none",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
               }}
             >
               <MicGlyph />

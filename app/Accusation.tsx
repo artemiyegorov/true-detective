@@ -543,7 +543,9 @@ function CasePanel({
             outline: "none",
             resize: "vertical",
             padding: "16px 56px 16px 16px",
-            fontSize: 15,
+            // 16px stops iOS Safari from zooming into the textarea on
+            // focus (anything below 16 triggers auto-zoom).
+            fontSize: 16,
             lineHeight: 1.55,
             minHeight: 220,
           }}
@@ -555,6 +557,7 @@ function CasePanel({
           onMouseUp={stopVoice}
           onTouchStart={startVoice}
           onTouchEnd={stopVoice}
+          onContextMenu={e => e.preventDefault()}
           disabled={transcribing}
           className="absolute flex items-center justify-center"
           style={{
@@ -565,6 +568,11 @@ function CasePanel({
             background: holding ? "var(--accent)" : "rgba(8,6,4,0.55)",
             border: `1px solid ${holding ? "var(--accent)" : "rgba(232,225,211,0.18)"}`,
             color: holding ? "#fff" : "rgba(232,225,211,0.85)",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+            WebkitTouchCallout: "none",
+            WebkitTapHighlightColor: "transparent",
+            touchAction: "manipulation",
           }}
         >
           <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
