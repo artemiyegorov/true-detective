@@ -125,7 +125,16 @@ export default function Chat({
     if (typeof window === "undefined") return;
     const SR = (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }).SpeechRecognition
       || (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
-    useWebSpeechRef.current = !!SR;
+    // iOS Safari technically exposes webkitSpeechRecognition but it
+    // doesn't reliably deliver `onresult` events — the mic indicator
+    // lights up and then nothing comes back. Force the MediaRecorder +
+    // /api/stt (Groq Whisper) path on iOS instead.
+    const ua = navigator.userAgent;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      // iPadOS 13+ identifies as Mac in UA but with touch points.
+      (ua.includes("Mac") && typeof navigator.maxTouchPoints === "number" && navigator.maxTouchPoints > 1);
+    useWebSpeechRef.current = !!SR && !isIOS;
   }, []);
 
   // Watch player-state for discovered evidence — re-renders when the
