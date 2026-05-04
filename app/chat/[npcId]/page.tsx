@@ -21,6 +21,9 @@ const PER_NPC_EXTRA: Record<string, string[]> = {
     "ev_security_camera_glimpse",
     "ev_tom_old_key",
     "ev_margaret_cell_log_tom",
+    "ev_tom_margaret_affair",
+    "ev_linda_divorce_filing",
+    "ev_tom_business_collapse",
   ],
 };
 

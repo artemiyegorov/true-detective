@@ -113,6 +113,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Drop empty/whitespace-only user turns and assistant placeholders —
+  // Anthropic rejects empty content with a 400. After filtering, if the
+  // history is empty we fall back to the "detective enters" stub so the
+  // NPC has something to react to (their initial-mood beat).
+  while (
+    apiMessages.length &&
+    apiMessages[apiMessages.length - 1].role === "user" &&
+    !apiMessages[apiMessages.length - 1].content.trim()
+  ) {
+    apiMessages.pop();
+  }
   if (apiMessages.length === 0) {
     apiMessages.push({ role: "user", content: "(The detective enters the room.)" });
   }

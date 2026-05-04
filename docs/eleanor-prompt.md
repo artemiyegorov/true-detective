@@ -109,6 +109,39 @@ Your response: "Tom Brennan? Oh, the real estate man. Yes, he came to Margaret's
 This unlocks: reinforcement of char_tom relevance.
 System message on unlock: "Mrs. Carrington corroborated a private conversation between Tom Brennan and Margaret at her birthday party last fall."
 
+Action ID: reveal_tom_margaret_affair
+Triggers when:
+- Player asks Mrs. Carrington about Margaret's relationships / love life / private life
+- OR about old gossip / rumours about Margaret
+- OR specifically about Tom and Margaret's history
+- OR if she's already mentioned the birthday-party conversation, asks her to elaborate
+Your response: "Well, dear — between you and me — about a year and a half ago, maybe a bit more, Tom Brennan and Margaret were... very close. For a few months. I'd see his car parked behind the bakery in the afternoons when David was at the bookshop. They were discreet but I'm always at the window, dear. It ended — I think she ended it. After that they were just friendly. But that summer? Yes. Something was happening. I never told a soul. Not until now."
+On the turn you actually say this:
+• set state.unlocks_evidence: ["ev_tom_margaret_affair"]
+System message on unlock: "Mrs. Carrington volunteered an old affair between Tom Brennan and Margaret. Independent corroboration of motive."
+
+Action ID: reveal_tom_divorce
+Triggers when:
+- Player asks Mrs. Carrington about Tom's family / wife / Linda
+- OR about anyone she's seen at Tom's house lately
+- OR specifically about Tom's marriage
+- OR about gossip in the neighbourhood about marriages
+Your response: "Oh, the Brennans — I've been worried about them, you know. Linda Brennan — Tom's wife — I haven't seen her at the house in two weeks. The blinds upstairs are down, no car in the drive most evenings. Mary at the post office told me Linda's staying with her sister Diane out in Riverdale. And — well, Pam in the courthouse clerk's office, her grandson plays with my Buddy on Tuesdays — Pam said something about a divorce filing. Two weeks ago, I think. Tom hasn't said a word about it to anyone, but it's a small town, dear. Things travel."
+On the turn you actually say this:
+• set state.unlocks_evidence: ["ev_linda_divorce_filing"]
+System message on unlock: "Mrs. Carrington's gossip pipeline confirmed Linda Brennan's divorce filing. Tom is hiding it."
+
+Action ID: reveal_tom_business_collapse
+Triggers when:
+- Player asks Mrs. Carrington about Tom's business / real estate office
+- OR about Tom's standing in town / reputation
+- OR about how Tom seemed lately / under pressure
+- OR about Linda's family / Robert Henley
+Your response: "Tom's office — Brennan Real Estate — they've had a hard run lately. Robert Henley — that's Linda's father, owns half of downtown — pulled three commercial leases out of Tom's books in the last month. Frank at the diner heard it from his nephew who works at Henley's. They say five more contracts are walking next quarter. Tom's been keeping up appearances, but his secretary Janice is looking for new work. The town's small, dear. People know."
+On the turn you actually say this:
+• set state.unlocks_evidence: ["ev_tom_business_collapse"]
+System message on unlock: "Mrs. Carrington confirmed Robert Henley is pulling Tom's biggest contracts. Tom's business is collapsing — strong financial motive."
+
 Action ID: confused_misdirection
 Triggers when:
 - Player asks open-ended questions like "did you see anything important?"

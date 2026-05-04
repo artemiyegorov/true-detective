@@ -1094,8 +1094,14 @@
     {
       "id": "ev_linda_divorce_filing",
       "name": "Linda Brennan filed for divorce 2 weeks ago",
-      "discovery": "public records or asking Tom directly with suspicion",
-      "significance": "Public-records search: Linda Brennan filed for divorce two weeks ago. The filing has not been publicised."
+      "discovery": "Mrs. Carrington's neighbourhood gossip when asked about Tom's family / Linda; corroborated via courthouse records",
+      "significance": "Linda Brennan filed for divorce two weeks ago. Tom is hiding the filing. Confirms his alibi (\"home with Linda\") is a lie — Linda has been at her sister's place in Riverdale."
+    },
+    {
+      "id": "ev_tom_business_collapse",
+      "name": "Tom's business is collapsing — Henley pulling contracts",
+      "discovery": "Mrs. Carrington's gossip pipeline when asked about Tom's reputation / business / Robert Henley",
+      "significance": "Robert Henley (Linda's father, owns half of downtown) pulled three commercial leases off Tom's books in the last month. Five more contracts walking next quarter. Tom is hiding the collapse. A strong financial motive — Margaret indirectly triggered it via the affair Linda discovered."
     },
     {
       "id": "ev_tom_old_key",
@@ -1187,7 +1193,7 @@
     "truth": {
       "name": "Truth",
       "rating": "⭐⭐⭐⭐⭐",
-      "trigger": "Player accuses Tom Brennan with motive citing affair/divorce/business collapse, AND has presented to Tom (or has in evidence) at least 3 of: ev_dna_match_tom, ev_security_camera_glimpse, ev_tom_old_key, ev_linda_divorce_filing, ev_tom_margaret_affair, ev_margaret_cell_log_tom, ev_paperweight_recovered",
+      "trigger": "Player accuses Tom Brennan with motive citing affair/divorce/business collapse, AND has presented to Tom (or has in evidence) at least 3 of: ev_dna_match_tom, ev_security_camera_glimpse, ev_tom_old_key, ev_linda_divorce_filing, ev_tom_margaret_affair, ev_tom_business_collapse, ev_margaret_cell_log_tom, ev_paperweight_recovered",
       "outcome_text": "Tom is convicted. The full picture comes out. You receive a commendation. Sarah faces embezzlement charges separately. Daniel is charged with disturbing the peace. The town reels but begins to heal."
     },
     "defensible_wrong_sarah": {
